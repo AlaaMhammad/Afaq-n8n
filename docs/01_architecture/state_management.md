@@ -1,0 +1,164 @@
+# State Management & the 3D Scene Bridge
+
+Client state lives in **Zustand** stores. Server data (services, projects, team) is fetched in Server Components and passed down as props — it is **not** duplicated into Zustand. Zustand owns only interactive, cross-component state:
+
+| Store | File | Owns |
+|-------|------|------|
+| `useSceneStore` | `src/stores/scene-store.ts` | Active workflow, assembled/exploded mode, selected/hovered node, camera targets, quality tier |
+| `useAgentStore` | `src/stores/agent-store.ts` | Copilot open state, session id, message list, streaming status, action queue |
+| `useUiStore` | `src/stores/ui-store.ts` | Theme, active section, modals (CV preview, booking prefill), reduced-motion |
+
+Why Zustand: R3F components render outside React DOM's tree semantics (inside `<Canvas>`), and the AI widget must drive the scene without prop-drilling. Zustand stores are plain modules usable from both trees and from non-React code (`useSceneStore.getState()` inside `useFrame`), with selector-based subscriptions to avoid re-rendering the canvas.
+
+## 1. `useSceneStore`
+
+```ts
+export type WorkflowMode = 'assembled' | 'exploded';
+export type QualityTier = 'high' | 'medium' | 'low' | 'fallback2d';
+
+interface CameraGoal {
+  position: [number, number, number];
+  target: [number, number, number];
+  durationMs?: number;
+}
+
+interface SceneState {
+  activeProjectSlug: string | null;
+  mode: WorkflowMode;
+  /** 0 → assembled, 1 → exploded; animated value read by useFrame */
+  explodeProgress: number;
+  selectedNodeId: string | null;
+  hoveredNodeId: string | null;
+  cameraGoal: CameraGoal | null;
+  quality: QualityTier;
+  autoRotate: boolean;
+
+  setActiveProject: (slug: string) => void;
+  setMode: (mode: WorkflowMode) => void;
+  toggleMode: () => void;
+  selectNode: (id: string | null) => void;
+  hoverNode: (id: string | null) => void;
+  focusCamera: (goal: CameraGoal) => void;
+  setQuality: (q: QualityTier) => void;
+  /** internal: tweened by <ExplodeDriver/> */
+  _setExplodeProgress: (p: number) => void;
+}
+```
+
+Rules:
+- `mode` is the **intent**; `explodeProgress` is the **animated value**. Only `<ExplodeDriver/>` (a GSAP tween inside the canvas) writes `explodeProgress`. Components read it in `useFrame` via `useSceneStore.getState()` (transient read — no React re-render per frame).
+- `setActiveProject` resets `mode` to `assembled` and `selectedNodeId` to `null`.
+- `quality` is set by `<PerformanceMonitor>` (drei) — on decline we step down one tier; `fallback2d` swaps the canvas for an SVG diagram.
+
+## 2. `useAgentStore`
+
+```ts
+export type ChatRole = 'user' | 'assistant' | 'tool';
+
+export interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  content: string;
+  createdAt: string;
+  sources?: Array<{ documentId: number; title: string; score: number }>;
+  actions?: AgentAction[];   // rendered as action bubbles
+  status?: 'streaming' | 'complete' | 'error';
+}
+
+export type AgentAction =
+  | { id: string; type: 'navigate_to'; payload: { sectionId: SectionId } }
+  | { id: string; type: 'trigger_3d_workflow'; payload: { projectSlug: string; mode: WorkflowMode } }
+  | { id: string; type: 'service_inquiry_submitted'; payload: { reference: string; serviceType: string } };
+
+export type SectionId = 'hero' | 'services' | 'portfolio' | 'team' | 'order';
+
+interface AgentState {
+  isOpen: boolean;
+  sessionId: string | null;          // persisted (localStorage) via zustand/middleware persist
+  messages: ChatMessage[];
+  status: 'idle' | 'connecting' | 'streaming' | 'error';
+  error: string | null;
+  pendingActions: AgentAction[];     // FIFO; drained by <AgentActionRunner/>
+  abortController: AbortController | null;
+
+  open: () => void;
+  close: () => void;
+  send: (text: string, locale: 'ar' | 'en') => Promise<void>;
+  stop: () => void;
+  enqueueAction: (a: AgentAction) => void;
+  shiftAction: () => AgentAction | undefined;
+  reset: () => void;
+}
+```
+
+Persistence: only `sessionId` and the last 30 `messages` are persisted (`partialize`). Streaming state is never persisted.
+
+## 3. `useUiStore`
+
+```ts
+interface UiState {
+  theme: 'dark' | 'light';                // default 'dark'; mirrored to <html class="dark">
+  activeSection: SectionId;               // updated by IntersectionObserver
+  cvPreview: { memberId: number; url: string } | null;
+  bookingPrefill: Partial<BookingDraft> | null;
+  prefersReducedMotion: boolean;
+
+  setTheme: (t: 'dark' | 'light') => void;
+  setActiveSection: (s: SectionId) => void;
+  openCvPreview: (memberId: number, url: string) => void;
+  closeCvPreview: () => void;
+  prefillBooking: (d: Partial<BookingDraft>) => void;
+}
+```
+
+Locale is **not** in Zustand — it is the URL segment (`/ar`, `/en`) owned by `next-intl`.
+
+## 4. The agent → scene bridge
+
+```mermaid
+flowchart LR
+    SSE["SSE event: action"] --> P["sse-client.ts<br/>parse + zod validate"]
+    P --> Q["useAgentStore.enqueueAction"]
+    Q --> R["&lt;AgentActionRunner/&gt;<br/>(mounted once in layout)"]
+    R -->|navigate_to| N["scrollToSection(id)<br/>+ useUiStore.setActiveSection"]
+    R -->|trigger_3d_workflow| S1["scrollToSection('portfolio')"]
+    S1 --> S2["useSceneStore.setActiveProject(slug)"]
+    S2 --> S3["await 400ms (camera settle)"]
+    S3 --> S4["useSceneStore.setMode(mode)"]
+    R -->|service_inquiry_submitted| T["toast + confetti burst<br/>(no state change)"]
+```
+
+`AgentActionRunner` contract:
+
+```ts
+// src/components/assistant/agent-action-runner.tsx
+const handlers: { [K in AgentAction['type']]: (a: Extract<AgentAction, { type: K }>) => Promise<void> } = {
+  navigate_to: async ({ payload }) => scrollToSection(payload.sectionId),
+  trigger_3d_workflow: async ({ payload }) => {
+    await scrollToSection('portfolio');
+    useSceneStore.getState().setActiveProject(payload.projectSlug);
+    await wait(400);
+    useSceneStore.getState().setMode(payload.mode);
+  },
+  service_inquiry_submitted: async ({ payload }) => toast.success(t('booking.submitted', payload)),
+};
+```
+
+Guarantees:
+1. **Sequential** — actions run one at a time in arrival order (a running flag + `shiftAction`).
+2. **Validated** — every action payload is parsed with a `zod` schema; unknown types or unknown `projectSlug`s are dropped and logged, never executed.
+3. **Reduced motion** — when `prefersReducedMotion`, scroll is instant and the explode tween duration is 0.
+4. **Idempotent** — re-running the same action leaves the same state.
+
+## 5. Store file layout
+
+```
+src/stores/
+├── scene-store.ts
+├── agent-store.ts
+├── ui-store.ts
+├── selectors.ts          # memoized selectors, e.g. selectIsExploded
+└── __tests__/            # Vitest: pure state transitions
+```
+
+Stores are created with `create<State>()(devtools(...))` in development only; no middleware in production except `persist` on the agent store.
