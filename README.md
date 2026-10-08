@@ -16,6 +16,8 @@ Bilingual (Arabic RTL · English LTR) platform for **Afaq Automation Agency** (`
 
 ## Quick start (Docker)
 
+> On Windows/macOS, run the frontend on the host for reliable hot reload (see [frontend/README.md](frontend/README.md)); everything else runs in Docker.
+
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
@@ -29,7 +31,7 @@ Set `ADMIN_SEED_PASSWORD` (12+ characters) in `backend/.env` before seeding to c
 
 | URL | Service |
 |-----|---------|
-| http://localhost:3000 | Frontend (Next.js) |
+| http://localhost:3000 | Frontend (Next.js) — `/ar` (default) or `/en` |
 | http://localhost:8000 | Backend API (`/api/v1`), health at `/up` |
 | http://localhost:8000/admin | Filament admin (Arabic RTL by default; switch language from the user menu) |
 | localhost:5432 / 6379 | PostgreSQL / Redis |
@@ -51,7 +53,7 @@ Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agen
 1. ✅ Documentation, scaffolding, Docker
 2. ✅ Database schema, realistic seeders, Filament admin
 3. ✅ RAG pipeline, AI agent with tool calling, n8n webhook
-4. Frontend foundations: theme, RTL/LTR, Zustand bridge
+4. ✅ Public API, frontend foundations: theme, RTL/LTR, Zustand bridge, UI kit
 5. 3D canvas and exploded workflows
 6. Core sections and Copilot UI
 7. Testing, hardening, deployment

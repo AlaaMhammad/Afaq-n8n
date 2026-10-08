@@ -162,3 +162,13 @@ src/stores/
 ```
 
 Stores are created with `create<State>()(devtools(...))` in development only; no middleware in production except `persist` on the agent store.
+
+## 6. As built (Phase 4)
+
+- **Theme is not in `useUiStore`.** next-themes owns it (ADR-013). `useUiStore` holds `activeSection`, `mobileNavOpen`, `cvPreview` and `bookingPrefill`.
+- **`useSceneStore.registerProjects([{slug, title}])`** is called by the portfolio with the projects it actually rendered. `setActiveProject(slug)` returns `false` for unknown slugs, so the agent can only target real projects. `projectTitles` feeds agent toasts.
+- **`useAgentStore`** persists `sessionId` + the last 30 completed messages (`afaq-copilot`) with `skipHydration: true`. `<AgentActionRunner/>` rehydrates on mount to avoid SSR mismatches. `send()` streams via `src/lib/api/sse-client.ts` and applies `reset` events by replacing the partial text.
+- **Action execution** is a plain module: `src/lib/agent/run-action.ts` (`runAgentAction`, `drainAgentActions`) with a module-level lock, so actions run strictly in order. The component only maps outcomes to localized toasts (sonner).
+- **Validation:** `src/lib/agent/actions.ts` (zod discriminated union) drops unknown action types and malformed payloads before they reach the stores.
+- **Verified live:** a Copilot message in Arabic ("اعرض لي مشروع مستخرج الفواتير مفككاً") streamed from Gemini. The `trigger_3d_workflow` action switched the portfolio to the invoice project, exploded it, highlighted the nav item and showed an Arabic toast.
+- **Dev/E2E hook:** in non-production builds `window.__afaq = { agent, scene }` exposes the stores for Playwright and manual checks.

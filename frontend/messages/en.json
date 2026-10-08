@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Afaq Automation — n8n workflows & AI agents",
+    "description": "We engineer n8n automations and Arabic-first AI agents that connect your systems into one reliable data flow.",
+    "brand": "Afaq Automation"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "hero": "Home",
+    "services": "Services",
+    "portfolio": "Portfolio",
+    "team": "Team",
+    "order": "Book a service",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to content"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "dark": "Dark theme",
+    "light": "Light theme"
+  },
+  "locale": {
+    "switch": "Change language",
+    "ar": "العربية",
+    "en": "English"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Retry",
+    "learnMore": "Learn more",
+    "close": "Close",
+    "startingFrom": "From",
+    "dataUnavailable": "This section could not be loaded right now. Please refresh in a moment."
+  },
+  "hero": {
+    "badge": "Automations running now",
+    "title": "Automation that runs quietly. Results you can see.",
+    "subtitle": "We engineer n8n workflows and Arabic-first AI agents, and connect your company's systems into one reliable data flow.",
+    "primaryCta": "Book a free consultation",
+    "secondaryCta": "Explore our 3D portfolio"
+  },
+  "services": {
+    "eyebrow": "What we do",
+    "title": "Automation services built for growth",
+    "subtitle": "From custom nodes to AI agents — every workflow ships with monitoring and documentation.",
+    "request": "Request this service"
+  },
+  "portfolio": {
+    "eyebrow": "Portfolio",
+    "title": "Real automation workflows you can explore",
+    "subtitle": "Pick a project and explode it to see every node and how data flows between them.",
+    "nodes": "nodes",
+    "avgExecution": "Avg. execution",
+    "failureRate": "Failure rate",
+    "monthlyRuns": "Runs / month",
+    "hoursSaved": "Hours saved / month",
+    "explode": "Explode",
+    "assemble": "Assemble",
+    "viewerSoon": "The 3D viewer is under construction — the interactive workflow appears here."
+  },
+  "team": {
+    "eyebrow": "Our team",
+    "title": "The Minds Behind the Magic",
+    "subtitle": "A senior team that builds what it designs.",
+    "previewCv": "Preview CV",
+    "downloadCv": "Download CV",
+    "cvTitle": "CV — {name}"
+  },
+  "booking": {
+    "eyebrow": "Start your project",
+    "title": "Book a service in two minutes",
+    "subtitle": "Tell us what you need and get an instant indicative estimate and a reference number.",
+    "formComingSoon": "The multi-step booking form arrives in the next phase — for now you can book through the Afaq Copilot assistant."
+  },
+  "copilot": {
+    "name": "Afaq Copilot",
+    "navigated": "Jumped to “{section}”",
+    "workflowShown": "Showing “{project}” ({mode})",
+    "inquirySubmitted": "Request {reference} submitted",
+    "modes": {
+      "exploded": "exploded",
+      "assembled": "assembled"
+    }
+  },
+  "footer": {
+    "tagline": "Automation engineering and AI agents for Gulf businesses.",
+    "rights": "© {year} Afaq Automation. All rights reserved.",
+    "contact": "Contact us"
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page may have moved, or the link is incorrect.",
+    "backHome": "Back to home",
+    "generic": "Something went wrong.",
+    "rateLimited": "Too many requests — try again in {seconds}s."
+  }
+}

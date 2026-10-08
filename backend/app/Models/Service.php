@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FlushesPublicApiCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,7 +11,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Service extends Model
 {
-    use HasFactory, HasTranslations;
+    use FlushesPublicApiCache, HasFactory, HasTranslations;
 
     /** @var list<string> */
     public array $translatable = ['title', 'description'];

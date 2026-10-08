@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Afaq frontend (Next.js 16)
 
-## Getting Started
+Bilingual one-page site for Afaq Automation Agency: Arabic RTL (default) and English LTR, with Obsidian dark (default) and clean light themes. Content comes from the Laravel API, and the AI concierge drives the page through Zustand stores.
 
-First, run the development server:
+## Run (recommended on Windows/macOS: on the host)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL / API_INTERNAL_URL → http://localhost:8000/api/v1
+npm install
+npm run dev                  # http://localhost:3000 → /ar
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The backend (`docker compose up -d postgres redis backend queue nginx` from the repo root) must be running for content and the AI chat.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script | What |
+|--------|------|
+| `npm run dev` | Next.js dev server (Turbopack) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (stores, SSE client, agent bridge, sections) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Layout
 
-## Learn More
+```
+src/
+├── app/[locale]/        root layout (html lang/dir, providers), page, not-found
+├── proxy.ts             locale negotiation (next-intl)
+├── i18n/                routing, request config (next/root-params), navigation
+├── components/
+│   ├── ui/              shared kit: Button, Card, Badge, Input/Textarea, Label, Dialog, Tooltip, Skeleton, Separator, Toaster, icons
+│   ├── layout/          Container, SectionShell, SiteHeader, SiteFooter, ThemeToggle, LocaleSwitcher, SectionObserver
+│   ├── sections/        Hero, Services, Portfolio (2D workflow explorer until the 3D canvas), Team (+ CV dialog), Booking
+│   ├── assistant/       AgentActionRunner (AI agent → page bridge)
+│   └── providers/       next-themes + tooltip providers
+├── stores/              Zustand: scene (3D), agent (Copilot + action queue), ui
+└── lib/                 api (client, cached content fetchers, SSE client, booking), agent (action schemas + runner), utils
+messages/{ar,en}.json    UI copy (type-checked keys)
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Architecture notes: `docs/03_frontend_3d/theme_and_i18n.md` §8 and `docs/01_architecture/state_management.md` §6.

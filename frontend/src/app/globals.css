@@ -1,26 +1,135 @@
 @import "tailwindcss";
 
+/*
+ * Afaq design tokens — docs/03_frontend_3d/theme_and_i18n.md
+ * Dark ("Obsidian", default) is set by next-themes as `.dark` on <html>; light is the base.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* light — accents darkened to keep AA contrast on white */
+  --background: #f7f7f9;
+  --surface: #ffffff;
+  --surface-2: #eeeef2;
+  --border: #dcdce3;
+  --foreground: #111114;
+  --muted: #5c5c68;
+  --accent: #e05500;
+  --accent-hover: #c24a00;
+  --accent-foreground: #ffffff;
+  --pulse: #0090a8;
+  --success: #15803d;
+  --danger: #be123c;
+  --glow-accent: 0 0 0 transparent;
+  --glow-pulse: 0 0 0 transparent;
+  --grid-line: rgb(17 17 20 / 0.05);
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0a0a0c;
+  --surface: #141419;
+  --surface-2: #1c1c23;
+  --border: #26262e;
+  --foreground: #ededf0;
+  --muted: #8a8a96;
+  --accent: #ff6b00;
+  --accent-hover: #ff5500;
+  --accent-foreground: #0a0a0c;
+  --pulse: #00e5ff;
+  --success: #22c55e;
+  --danger: #f43f5e;
+  --glow-accent: 0 0 24px rgb(255 107 0 / 0.45);
+  --glow-pulse: 0 0 20px rgb(0 229 255 / 0.35);
+  --grid-line: rgb(255 255 255 / 0.04);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-pulse: var(--pulse);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-sans: "Inter Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
+
+  --shadow-glow-accent: var(--glow-accent);
+  --shadow-glow-pulse: var(--glow-pulse);
+
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Sticky header offset for #section anchors */
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Arabic pages lead with IBM Plex Sans Arabic */
+  :lang(ar) body {
+    font-family: var(--font-arabic);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--pulse);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility text-balance {
+  text-wrap: balance;
 }

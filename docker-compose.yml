@@ -106,7 +106,9 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      API_INTERNAL_URL: http://nginx/api/v1 # server-side fetches stay on the compose network
       WATCHPACK_POLLING: "true"
+      NEXT_WATCH_POLL_MS: "1000" # Turbopack polling (bind mounts drop file events on Windows/macOS)
       NEXT_TELEMETRY_DISABLED: "1"
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -114,6 +116,9 @@ services:
       - ./frontend:/app
       - /app/node_modules # Linux-native deps, isolated from the host's node_modules
       - /app/.next
+    depends_on:
+      nginx:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000"]
       interval: 15s

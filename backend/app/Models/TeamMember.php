@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FlushesPublicApiCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Spatie\Translatable\HasTranslations;
 
 class TeamMember extends Model
 {
-    use HasFactory, HasTranslations;
+    use FlushesPublicApiCache, HasFactory, HasTranslations;
 
     /** @var list<string> */
     public array $translatable = ['name', 'role', 'bio'];

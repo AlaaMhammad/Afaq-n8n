@@ -22,6 +22,11 @@ class SetApiLocale
 
         App::setLocale($locale);
 
-        return $next($request);
+        $response = $next($request);
+        // Responses differ by Accept-Language — caches must not serve Arabic to an English visitor.
+        $response->headers->set('Vary', trim($response->headers->get('Vary').', Accept-Language', ', '));
+        $response->headers->set('Content-Language', $locale);
+
+        return $response;
     }
 }

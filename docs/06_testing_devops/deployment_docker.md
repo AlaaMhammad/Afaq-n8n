@@ -43,6 +43,17 @@ docker compose exec backend php artisan rag:index-knowledge   # needs GEMINI_API
 docker compose logs -f backend nginx
 ```
 
+### Recommended dev loop (Windows/macOS)
+
+Run the **backend stack in Docker** and **Next.js on the host**: Docker Desktop bind mounts drop file events, so Fast Refresh inside the container is unreliable (the Next.js docs recommend host dev).
+
+```bash
+docker compose up -d postgres redis backend queue nginx
+cd frontend && cp .env.example .env.local && npm install && npm run dev
+```
+
+The compose `frontend` service still works for an all-Docker setup: it sets `API_INTERNAL_URL=http://nginx/api/v1` for Server Components and `NEXT_WATCH_POLL_MS=1000` (Turbopack polling).
+
 ### Dev performance & permissions (Windows/macOS hosts)
 
 - **Hot paths live in named volumes.** Bind-mounted NTFS is slow for Linux containers (listing `vendor/` took ~85 s; Laravel booted in ~30 s). `vendor/` and `storage/framework/` are therefore Docker named volumes — boot drops to ~2 s and requests to ~0.2 s. App code stays bind-mounted for live editing.

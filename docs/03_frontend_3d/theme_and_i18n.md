@@ -135,3 +135,18 @@ The API resolves translatable fields per `?locale=`; the frontend always passes 
 - [ ] Theme toggle has no flash on reload in both themes.
 - [ ] All accent text passes AA in both themes (axe in Playwright).
 - [ ] Arabic 3D labels shaped correctly (connected letters), no tofu glyphs.
+
+## 8. As built (Phase 4)
+
+Where this section differs from §1–§7, this section wins (ADR-012/013).
+
+| Concern | Implementation |
+|---------|----------------|
+| Routing | `src/app/[locale]/layout.tsx` is the **root layout**; `generateStaticParams` returns `ar`/`en`, so both locales are prerendered under Cache Components. `/` → `/ar` (or the `afaq-locale` cookie / `Accept-Language`) via `src/proxy.ts` (`next-intl/middleware`). Unknown paths fall through `[...rest]` to the localized `not-found.tsx`. |
+| Messages | `frontend/messages/{ar,en}.json` (identical key sets); `src/i18n/request.ts` reads the locale with `next/root-params`; `src/global.d.ts` makes keys type-checked (`t("hero.title")`). |
+| Theme | `next-themes` (`attribute="class"`, `defaultTheme="dark"`, `storageKey="afaq-theme"`, no system mode). Server HTML ships `class="dark"`, and a pre-paint script switches to light when chosen. No cookie read, so no dynamic rendering. |
+| Tokens | `src/app/globals.css`: light values on `:root`, dark on `.dark`, exposed to Tailwind v4 via `@theme inline` (`bg-background`, `bg-surface`, `text-accent`, `text-pulse`, `shadow-glow-accent`, `bg-grid`). |
+| Fonts | Self-hosted with `@fontsource`: `"Inter Variable"` (LTR), `"IBM Plex Sans Arabic"` (`:lang(ar) body`), `"JetBrains Mono Variable"` (metrics/code). |
+| Bidi | Prices and metrics render inside `<bdi dir="ltr">` with Latin digits (`ar-SA-u-nu-latn`, narrow `$`). Letter-spaced uppercase "eyebrow" labels are LTR-only (`ltr:tracking-…`) because tracking breaks Arabic letter joining. |
+| Data | Server fetchers in `src/lib/api/content.ts` use `"use cache"` + `cacheLife("minutes")` + `cacheTag(...)`; `safely()` turns an unreachable API into a per-section empty state instead of a failed page. |
+| Media | Avatars are served by Laravel as small WebP and rendered with `next/image` `unoptimized` (the optimizer in Docker cannot reach the browser-facing API host). |
