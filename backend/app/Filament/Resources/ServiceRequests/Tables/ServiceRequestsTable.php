@@ -6,6 +6,7 @@ use App\Domain\Inquiry\Enums\BudgetRange;
 use App\Domain\Inquiry\Enums\RequestSource;
 use App\Domain\Inquiry\Enums\RequestStatus;
 use App\Filament\Resources\ServiceRequests\Actions\ChangeStatusAction;
+use App\Filament\Resources\ServiceRequests\Actions\ResendToN8nAction;
 use App\Models\ServiceRequest;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -77,6 +78,8 @@ class ServiceRequestsTable
             ->recordActions([
                 ViewAction::make(),
                 ChangeStatusAction::make(),
+                ResendToN8nAction::make()
+                    ->visible(fn (ServiceRequest $record) => ! $record->wasNotifiedToN8n()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

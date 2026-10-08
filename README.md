@@ -34,13 +34,23 @@ Set `ADMIN_SEED_PASSWORD` (12+ characters) in `backend/.env` before seeding to c
 | http://localhost:8000/admin | Filament admin (Arabic RTL by default; switch language from the user menu) |
 | localhost:5432 / 6379 | PostgreSQL / Redis |
 
-AI features need a Google AI Studio key: set `GEMINI_API_KEY` in `backend/.env`. To switch to a local Ollama, set `LLM_DRIVER=ollama` and `EMBEDDING_DRIVER=ollama`. Details are in [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agent.md).
+### AI concierge and n8n
+
+1. Set `GEMINI_API_KEY` (Google AI Studio) in `backend/.env`, then embed the knowledge base:
+   ```bash
+   docker compose exec backend php artisan rag:index-knowledge
+   ```
+2. Chat endpoint: `POST http://localhost:8000/api/v1/ai/chat` (Server-Sent Events). Body: `{"message": "…", "locale": "ar", "session_id": null}`.
+3. Lead notifications: set `N8N_WEBHOOK_URL` to your n8n Webhook node. Each POST carries `X-Afaq-Signature: sha256=<HMAC of the raw body with N8N_WEBHOOK_SECRET>`; verify it in n8n with a Crypto node before trusting the payload.
+4. To use a local Ollama instead, set `LLM_DRIVER=ollama` and `EMBEDDING_DRIVER=ollama`, then run `rag:index-knowledge --force`.
+
+Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agent.md).
 
 ## Execution phases
 
 1. ✅ Documentation, scaffolding, Docker
 2. ✅ Database schema, realistic seeders, Filament admin
-3. RAG pipeline, AI agent with tool calling, n8n webhook
+3. ✅ RAG pipeline, AI agent with tool calling, n8n webhook
 4. Frontend foundations: theme, RTL/LTR, Zustand bridge
 5. 3D canvas and exploded workflows
 6. Core sections and Copilot UI

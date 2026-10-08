@@ -149,7 +149,7 @@ WebGL asset optimization: procedural geometry by default; any future GLB models 
 | `QUEUE_CONNECTION` / `CACHE_STORE` | backend | `redis` | `redis` |
 | `LLM_DRIVER` / `EMBEDDING_DRIVER` | backend | `gemini` (or `fake`) | `gemini` |
 | `GEMINI_API_KEY` | backend | your AI Studio key | secret |
-| `GEMINI_CHAT_MODEL` / `EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS` | backend | `gemini-2.5-flash` / `text-embedding-004` / `768` | same |
+| `GEMINI_CHAT_MODEL` / `EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS` | backend | `gemini-3.5-flash` / `gemini-embedding-2` / `768` | same |
 | `OLLAMA_BASE_URL` | backend | `http://host.docker.internal:11434` | — |
 | `N8N_WEBHOOK_URL` / `N8N_WEBHOOK_SECRET` | backend | test webhook / random | prod webhook / secret |
 | `ADMIN_SEED_PASSWORD` | backend | dev value | unset after first deploy |

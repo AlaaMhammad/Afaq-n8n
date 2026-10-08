@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Knowledge\Enums\KnowledgeCategory;
+use App\Services\AI\Contracts\EmbeddingDriver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -97,10 +98,9 @@ class KnowledgeDocument extends Model
         return $stale ? self::STATUS_STALE : self::STATUS_INDEXED;
     }
 
+    /** Provider-qualified id of the active embedding model, e.g. "gemini/gemini-embedding-2". */
     public static function configuredEmbeddingModel(): string
     {
-        $driver = config('ai.embeddings.default');
-
-        return $driver.'/'.config("ai.embeddings.drivers.{$driver}.model", 'unknown');
+        return app(EmbeddingDriver::class)->model();
     }
 }

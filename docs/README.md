@@ -31,14 +31,17 @@ The source of truth for scope is [`../afaq_automation_agency_master_plan.md`](..
 
 | ID | Date | Decision | Rationale | Supersedes |
 |----|------|----------|-----------|------------|
-| ADR-001 | 2026-10-08 | **Google Gemini** (AI Studio free tier) for chat + tool calling (`gemini-2.5-flash`) and embeddings (`text-embedding-004`). | Single free-tier key for both capabilities; native function calling; good Arabic quality. | Plan §2 "OpenAI / Claude API" |
+| ADR-001 | 2026-10-08 | **Google Gemini** (AI Studio free tier) for chat + tool calling and embeddings. *Model ids superseded by ADR-009.* | Single free-tier key for both capabilities; native function calling; good Arabic quality. | Plan §2 "OpenAI / Claude API" |
 | ADR-002 | 2026-10-08 | **Adapter/Driver pattern** for `LlmDriver` and `EmbeddingDriver`, selected by `LLM_DRIVER` / `EMBEDDING_DRIVER` (`gemini`, `ollama`, `fake`). | Swap to a local **Ollama** instance by editing `.env` only; deterministic `fake` driver for tests. | — |
-| ADR-003 | 2026-10-08 | Embedding column is **`vector(768)`**. | Native size of `text-embedding-004`; also matches Ollama `nomic-embed-text` (768) so a driver swap needs no migration — only a re-index. Fallback model: `gemini-embedding-001` with `outputDimensionality: 768`. | Plan §4 Phase 2 `vector 1536` |
+| ADR-003 | 2026-10-08 | Embedding column is **`vector(768)`**. | Matches Gemini embeddings truncated with `outputDimensionality: 768` (ADR-009); also matches Ollama `nomic-embed-text` (768) so a driver swap needs no migration — only a re-index. Fallback model: `gemini-embedding-001` with `outputDimensionality: 768`. | Plan §4 Phase 2 `vector 1536` |
 | ADR-004 | 2026-10-08 | **Filament v4** for the admin panel. | Current stable line with Laravel 12 support; v3 is in maintenance. | Plan §2 "Filament v3" |
 | ADR-005 | 2026-10-08 | Add an **nginx** container in front of PHP-FPM. | FPM speaks FastCGI only; nginx serves `public/` and buffers SSE correctly (`X-Accel-Buffering: no`). | Plan §4 Phase 1 (4 services) |
 | ADR-006 | 2026-10-08 | Arabic (`ar`) is the **default locale**; every translatable column stores `{ "ar": "...", "en": "..." }`. | Primary audience is Arabic-speaking; Spatie Translatable reads this shape natively. | — |
 | ADR-007 | 2026-10-08 | Dev containers keep `vendor/` and `storage/framework/` in **named volumes**; dev FPM runs as root; OPcache on in dev. | Windows bind mounts made Laravel boot in ~30 s; named volumes bring it to ~2 s. Root FPM avoids ownership clashes with host files. Prod image unchanged (non-root). | — |
 | ADR-008 | 2026-10-08 | Admin panel is **Arabic RTL by default** with an in-panel ar/en switcher (`SetAdminLocale` + `lang/ar.json`); Filament auto-labels are translated globally. | Matches ADR-006 for the team operating the platform. | — |
+| ADR-009 | 2026-10-08 | Models verified against the live API: chat **`gemini-3.5-flash`** (fallback **`gemini-3.5-flash-lite`**, `thinkingLevel: low`), embeddings **`gemini-embedding-2`** @ 768-d (L2-normalised). | `text-embedding-004` is retired and `gemini-2.5-flash` is closed to new keys (both 404). `gemini-3.8-flash` measured ~6.4 s to first byte vs ~2 s for 3.5-flash on the free tier; both support tool calling with `thoughtSignature`. All ids remain `.env` settings. | ADR-001 model ids |
+| ADR-010 | 2026-10-08 | Transcripts are PII-scrubbed in Postgres, but each message’s **raw text is cached for 24 h** (Redis, per session) and used only to rebuild the model’s history. | A scrubbed history (“[email]”) made multi-turn booking impossible; the cache keeps at-rest storage clean while the conversation works. | — |
+| ADR-011 | 2026-10-08 | Retrieval threshold `RAG_MIN_SCORE=0.60`. | Calibrated on the seeded KB: hit@3 = 12/12 (ar+en); relevant top hits scored 0.64–0.89, off-topic ≤ 0.57. | Plan value 0.55 |
 
 ## Glossary
 

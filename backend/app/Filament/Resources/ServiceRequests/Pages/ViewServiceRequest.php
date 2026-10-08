@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ServiceRequests\Pages;
 
 use App\Filament\Resources\ServiceRequests\Actions\ChangeStatusAction;
+use App\Filament\Resources\ServiceRequests\Actions\ResendToN8nAction;
 use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
@@ -16,6 +17,7 @@ class ViewServiceRequest extends ViewRecord
     {
         return [
             ChangeStatusAction::make(),
+            ResendToN8nAction::make(),
             DeleteAction::make(),
             RestoreAction::make(),
         ];

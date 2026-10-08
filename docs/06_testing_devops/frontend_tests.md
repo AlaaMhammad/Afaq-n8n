@@ -20,7 +20,7 @@ Scripts (`package.json`): `test`, `test:watch`, `test:e2e`, `test:e2e:ui`, `type
 |--------|-------|
 | `stores/scene-store` | `setActiveProject` resets mode/selection; `toggleMode`; quality step-down/up bounds |
 | `stores/agent-store` | send → status transitions; abort keeps partial message; action queue FIFO; persist partialize (only sessionId + last 30 msgs) |
-| `lib/api/sse-client` | Parses multi-event chunks split across reads; ignores `: ping`; invalid JSON → `onError`; unknown event ignored |
+| `lib/api/sse-client` | Parses multi-event chunks split across reads; applies `reset` (replaces partial text); invalid JSON → `onError`; unknown event ignored |
 | `lib/api/client` | problem+json → `ApiError` with `problem.code`; locale query param appended |
 | `useLocalizedWorkflow` | X mirrored for `ar`, untouched for `en`, labels resolved |
 | `AgentActionRunner` | `navigate_to` calls scroll helper; `trigger_3d_workflow` sets project then mode (fake timers); invalid payload dropped; sequential execution |

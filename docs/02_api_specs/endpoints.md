@@ -210,7 +210,7 @@ Response headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, 
 | `tool_result` | `{ "id": "call_1", "ok": true, "summary": "Inquiry AFQ-7K2M9P created" }` | after server tool executes |
 | `error` | RFC 7807 object | recoverable or fatal error; stream closes after fatal |
 | `done` | `{ "message_id": 431, "usage": { "input": 812, "output": 164 } }` | end of turn |
-| *(comment)* | `: ping` | heartbeat every 15 s |
+| `reset` | `{ "text": "…" }` | provider failed mid-answer: replace the current assistant text with `text`, more tokens follow (one retry per round) |
 
 Example stream:
 

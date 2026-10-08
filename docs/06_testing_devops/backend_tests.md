@@ -104,3 +104,19 @@ GitHub Actions job `backend`:
 3. `composer install --no-interaction --prefer-dist`.
 4. `php artisan test --parallel --coverage --min=80`.
 5. `./vendor/bin/pint --test` (code style) and `composer audit`.
+
+## 5. Suite as built (end of Phase 3)
+
+119 tests / 544 assertions, ~70 s in the dev container (`docker compose exec -T backend php artisan test`). File names differ slightly from the plan above:
+
+| File | Covers |
+|------|--------|
+| `tests/Unit/Ai/DriversTest.php` | Gemini mapping (roles, tools, `thoughtSignature` echo), SSE parsing, retry → fallback model, no retry after output / on auth errors; Gemini embeddings (batching, `retryDelay`, dimension check, L2 normalisation); Ollama chat NDJSON + nomic prefixes; manager resolution |
+| `tests/Unit/Ai/PromptGuardTest.php` | Injection block/flag datasets (ar + en), benign questions, flooding, invisible chars, delimiter escaping, leak detection, secret redaction |
+| `tests/Unit/Ai/TextProcessingTest.php` | Arabic normaliser, chunker (FAQ, packing, overlap), PII scrubber, vector helpers |
+| `tests/Feature/IndexKnowledgeCommandTest.php` | Dry run, 768-d indexing, reuse of unchanged chunks, `--force`, model change → stale, retrieval + same-language preference |
+| `tests/Feature/Ai/ChatStreamTest.php` | SSE event order and headers, scrubbed persistence, prompt/history construction, 422 problems before streaming, provider error event, mid-answer `reset` + retry, leak withholding, session history endpoint, 10/min throttle |
+| `tests/Feature/Ai/ToolCallingTest.php` | 3D action + signature round-trip, invalid/unknown tools, booking gates (confirmation, typed email, duplicates), iteration cap |
+| `tests/Feature/Inquiry/InquiryPipelineTest.php` | `CreateServiceRequest` (normalisation, estimate, dedupe), signed n8n webhook (payload, HMAC, failure recording, skip when unconfigured) |
+
+Live checks against the real Gemini API (not in CI) are described in the Phase 3 report: retrieval hit@3 12/12, Arabic/English answers, 3D and navigation tools, two-turn booking in both languages, and signed delivery to a mock n8n receiver.

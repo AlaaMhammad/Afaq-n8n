@@ -202,7 +202,7 @@ Pivot `project_service` (`project_id`, `service_id`, composite PK, cascade on de
 | `chunk_index` | smallint | yes | position within parent |
 | `embedding` | `vector(768)` | yes | null until indexed |
 | `content_hash` | char(64) | yes | sha256 of content — skip re-embedding unchanged chunks |
-| `embedding_model` | varchar(64) | yes | e.g. `gemini/text-embedding-004` — detects stale vectors after a driver swap |
+| `embedding_model` | varchar(64) | yes | e.g. `gemini/gemini-embedding-2` — detects stale vectors after a driver swap |
 | `indexed_at` | timestamp | yes | |
 | `metadata` | jsonb | no | `{ "source_url", "tags", "service_slug" }` |
 | timestamps | | | |

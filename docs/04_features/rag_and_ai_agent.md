@@ -2,7 +2,23 @@
 
 Afaq Copilot answers questions about the agency, grounded in `knowledge_documents` via pgvector retrieval, and can **act**: navigate the page, explode 3D workflows, and file service inquiries through tool calling.
 
-Provider (ADR-001/002/003): **Google Gemini** by default (`gemini-2.5-flash` chat, `text-embedding-004` 768-d embeddings), behind driver interfaces so a local **Ollama** can be swapped in through `.env`.
+Provider (ADR-001/002/003/009): **Google Gemini** by default — chat `gemini-3.5-flash` (fallback `gemini-3.5-flash-lite`), embeddings `gemini-embedding-2` truncated to 768-d — behind driver interfaces so a local **Ollama** can be swapped in through `.env`.
+
+> **As built (Phase 3).** Section 0 below records what the live API required; where it differs from later sections, section 0 wins.
+
+## 0. Implementation notes (as built)
+
+| Topic | Decision |
+|-------|----------|
+| Models | `text-embedding-004` is retired and `gemini-2.5-flash` is closed to new keys (both returned 404). Defaults: `GEMINI_CHAT_MODEL=gemini-3.5-flash`, `GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite`, `EMBEDDING_MODEL=gemini-embedding-2`, `GEMINI_THINKING_LEVEL=low` (`minimal` is rejected by Gemini 3 flash). `gemini-3.8-flash` works but measured ~6.4 s to first byte vs ~2 s. |
+| Tool calls | Gemini 3 returns `functionCall.id` and a `thoughtSignature` on the part. Both are kept in `ToolCall::$providerMeta` and echoed verbatim on the next request — required for multi-step tool use. Function results are sent as `functionResponse { id, name, response: { result } }` in a `user` content. |
+| Managers | Two Laravel Managers: `LlmManager` and `EmbeddingManager` (not a single `AiManager`). Drivers validate the returned vector length at runtime (no network call at boot). |
+| Resilience | Driver: a transient failure (408/429/5xx, including Gemini “high demand” error frames) **before any output** is retried on the primary model, then the fallback model. Orchestrator: if a transient failure hits **after tokens were streamed**, it emits `event: reset {"text": "…"}` (the text to roll back to) and retries the round once. |
+| Retrieval | `RAG_MIN_SCORE=0.60` (ADR-011). Calibration on the seeded KB with real embeddings: hit@3 12/12 across Arabic and English questions; relevant top hits 0.64–0.89; off-topic ≤ 0.57. Chunks are only compared with chunks embedded by the **same** `embedding_model`. |
+| Indexing | 34 sources → 60 chunks in ~40 s on the free tier. Unchanged chunks (same SHA-256 and model) reuse their vectors. Knowledge content is **not** PII-scrubbed (it is admin-authored and intentionally contains agency contact details). |
+| History & PII | DB transcripts are scrubbed; each message’s raw text is cached for 24 h per session and used only to rebuild model history (ADR-010). Emails the user typed are cached separately so `submit_service_inquiry` can verify the address. |
+| Fake drivers | `FakeEmbeddingDriver` is a hashed bag-of-words (texts sharing words are closer), so retrieval tests are meaningful offline; `FakeLlmDriver::script(...)` replays scripted turns and records requests. |
+| Prompt-leak check | Compares 8-grams of the answer with the confidential **RULES/TOOLS** section only, not with the public identity line, project/service lists or retrieved context. |
 
 ## 1. Driver architecture
 
@@ -54,7 +70,7 @@ interface LlmDriver
      */
     public function stream(ChatRequest $request): \Generator;
 
-    public function name(): string; // "gemini/gemini-2.5-flash"
+    public function name(): string; // "gemini/gemini-3.5-flash"
 }
 
 interface EmbeddingDriver
@@ -66,7 +82,7 @@ interface EmbeddingDriver
     public function embedMany(array $texts, EmbeddingTask $task = EmbeddingTask::Document): array;
 
     public function dimensions(): int;   // must equal config('ai.embeddings.dimensions') = 768
-    public function model(): string;     // "gemini/text-embedding-004"
+    public function model(): string;     // "gemini/gemini-embedding-2"
 }
 
 enum EmbeddingTask: string { case Query = 'query'; case Document = 'document'; }
@@ -101,7 +117,7 @@ return [
             'gemini' => [
                 'api_key'  => env('GEMINI_API_KEY'),
                 'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
-                'model'    => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+                'model'    => env('GEMINI_CHAT_MODEL', 'gemini-3.5-flash'),
                 'timeout'  => 60,
             ],
             'ollama' => [
@@ -119,7 +135,7 @@ return [
             'gemini' => [
                 'api_key'  => env('GEMINI_API_KEY'),
                 'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
-                'model'    => env('EMBEDDING_MODEL', 'text-embedding-004'),
+                'model'    => env('EMBEDDING_MODEL', 'gemini-embedding-2'),
                 'batch'    => 100,
             ],
             'ollama' => [
@@ -132,7 +148,7 @@ return [
     ],
     'rag' => [
         'top_k'       => 5,
-        'min_score'   => 0.55,
+        'min_score'   => 0.60,
         'chunk_tokens'=> 350,
         'overlap'     => 50,
     ],
@@ -158,8 +174,8 @@ return [
 | Tool call in output | part `{ functionCall: { name, args } }` → `ToolCallEvt` (id generated locally) |
 | Tool result in input | part `{ functionResponse: { name, response: { result } } }` |
 | Usage | `usageMetadata.promptTokenCount` / `candidatesTokenCount` |
-| Embed one | `POST /models/text-embedding-004:embedContent` `{ content: { parts: [{ text }] }, taskType: "RETRIEVAL_QUERY" \| "RETRIEVAL_DOCUMENT", title? }` → `embedding.values` |
-| Embed batch | `POST /models/text-embedding-004:batchEmbedContents` `{ requests: [...] }` (≤ 100) → `embeddings[].values` |
+| Embed one | `POST /models/gemini-embedding-2:embedContent` `{ content: { parts: [{ text }] }, taskType: "RETRIEVAL_QUERY" \| "RETRIEVAL_DOCUMENT", title? }` → `embedding.values` |
+| Embed batch | `POST /models/gemini-embedding-2:batchEmbedContents` `{ requests: [...] }` (≤ 100) → `embeddings[].values` |
 | Fallback model | `gemini-embedding-001` + `outputDimensionality: 768` (normalize the vector — truncated outputs are not unit-length) |
 
 The streaming adapter reads the SSE body line-by-line with Guzzle (`'stream' => true`), parsing `data: {json}` frames.
@@ -215,7 +231,7 @@ The Filament action runs the same logic through `IndexKnowledgeJob` (queued, `ti
 final class Retriever
 {
     /** @return Collection<int, RetrievedChunk> */
-    public function search(string $query, string $locale, int $k = 5, float $minScore = 0.55): Collection
+    public function search(string $query, string $locale, int $k = 5, float $minScore = 0.60): Collection
     {
         $vector = $this->embeddings->embed($query, EmbeddingTask::Query);
         $literal = '['.implode(',', $vector).']';

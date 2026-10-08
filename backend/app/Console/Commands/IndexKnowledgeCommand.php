@@ -2,17 +2,15 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Knowledge\KnowledgeIndexer;
 use App\Models\KnowledgeDocument;
-use App\Services\AI\Contracts\EmbeddingDriver;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
+use Throwable;
 
 /**
  * Chunk + embed knowledge source documents into pgvector.
  * Spec: docs/04_features/rag_and_ai_agent.md §2
- *
- * Phase 2 ships source selection (pending / stale / forced) and the admin trigger chain.
- * Phase 3 binds an EmbeddingDriver and adds the chunk → embed → upsert pipeline.
  */
 class IndexKnowledgeCommand extends Command
 {
@@ -23,7 +21,7 @@ class IndexKnowledgeCommand extends Command
 
     protected $description = 'Chunk and embed knowledge documents for RAG retrieval';
 
-    public function handle(): int
+    public function handle(KnowledgeIndexer $indexer): int
     {
         $sources = $this->selectSources();
 
@@ -49,16 +47,47 @@ class IndexKnowledgeCommand extends Command
             return self::SUCCESS;
         }
 
-        if (! app()->bound(EmbeddingDriver::class)) {
-            $this->components->error('No embedding driver is bound yet. The Gemini/Ollama drivers ship in Phase 3 — run with --dry-run until then.');
+        $totals = ['chunks' => 0, 'embedded' => 0, 'reused' => 0];
+        $failures = [];
+        $started = microtime(true);
+
+        $bar = $this->output->createProgressBar($sources->count());
+        $bar->start();
+
+        foreach ($sources as $source) {
+            try {
+                foreach ($indexer->index($source, (bool) $this->option('force')) as $key => $count) {
+                    $totals[$key] += $count;
+                }
+            } catch (Throwable $e) {
+                $failures[] = "#{$source->id} {$source->title}: {$e->getMessage()}";
+                report($e);
+            }
+            $bar->advance();
+        }
+
+        $bar->finish();
+        $this->newLine(2);
+
+        foreach ($failures as $failure) {
+            $this->components->error($failure);
+        }
+
+        $indexed = $sources->count() - count($failures);
+        $summary = sprintf(
+            'Indexed %d/%d document(s) → %d chunks (%d embedded, %d reused) in %.1fs.',
+            $indexed, $sources->count(), $totals['chunks'], $totals['embedded'], $totals['reused'], microtime(true) - $started,
+        );
+
+        if ($failures !== []) {
+            $this->components->error($summary);
 
             return self::FAILURE;
         }
 
-        // Phase 3: chunk → embedMany → upsert chunks (see rag_and_ai_agent.md §2).
-        $this->components->error('Embedding pipeline not implemented yet (Phase 3).');
+        $this->components->info($summary);
 
-        return self::FAILURE;
+        return self::SUCCESS;
     }
 
     /** @return Collection<int, KnowledgeDocument> */

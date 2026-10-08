@@ -102,7 +102,7 @@ sequenceDiagram
     G-->>A: ok | blocked
     A->>E: embed(message)
     E-->>A: float[768]
-    A->>R: topK(vector, k=5, minScore=0.55)
+    A->>R: topK(vector, k=5, minScore=0.60)
     R->>P: ORDER BY embedding <=> :q LIMIT 5
     P-->>R: chunks
     A-->>W: event: sources
@@ -168,7 +168,7 @@ backend/app/
 │   ├── Drivers/Llm/           # GeminiLlmDriver, OllamaLlmDriver, FakeLlmDriver
 │   ├── Drivers/Embedding/     # GeminiEmbeddingDriver, OllamaEmbeddingDriver, FakeEmbeddingDriver
 │   ├── Tools/                 # NavigateTo, Trigger3dWorkflow, SubmitServiceInquiry
-│   ├── AiManager.php          # Laravel Manager resolving drivers from config/ai.php
+│   ├── LlmManager.php / EmbeddingManager.php  # Laravel Managers resolving drivers from config/ai.php
 │   ├── Retriever.php          # pgvector similarity search
 │   ├── PromptGuard.php        # injection + PII scrubbing
 │   └── ChatOrchestrator.php   # RAG + tool loop, emits SSE events
