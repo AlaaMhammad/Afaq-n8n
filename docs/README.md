@@ -37,6 +37,8 @@ The source of truth for scope is [`../afaq_automation_agency_master_plan.md`](..
 | ADR-004 | 2026-10-08 | **Filament v4** for the admin panel. | Current stable line with Laravel 12 support; v3 is in maintenance. | Plan §2 "Filament v3" |
 | ADR-005 | 2026-10-08 | Add an **nginx** container in front of PHP-FPM. | FPM speaks FastCGI only; nginx serves `public/` and buffers SSE correctly (`X-Accel-Buffering: no`). | Plan §4 Phase 1 (4 services) |
 | ADR-006 | 2026-10-08 | Arabic (`ar`) is the **default locale**; every translatable column stores `{ "ar": "...", "en": "..." }`. | Primary audience is Arabic-speaking; Spatie Translatable reads this shape natively. | — |
+| ADR-007 | 2026-10-08 | Dev containers keep `vendor/` and `storage/framework/` in **named volumes**; dev FPM runs as root; OPcache on in dev. | Windows bind mounts made Laravel boot in ~30 s; named volumes bring it to ~2 s. Root FPM avoids ownership clashes with host files. Prod image unchanged (non-root). | — |
+| ADR-008 | 2026-10-08 | Admin panel is **Arabic RTL by default** with an in-panel ar/en switcher (`SetAdminLocale` + `lang/ar.json`); Filament auto-labels are translated globally. | Matches ADR-006 for the team operating the platform. | — |
 
 ## Glossary
 

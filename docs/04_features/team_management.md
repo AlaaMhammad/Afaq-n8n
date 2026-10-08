@@ -59,7 +59,7 @@ public function cv(Request $request, TeamMember $teamMember)
 | Active | `Toggle` | |
 | Order | table drag-reorder (`->reorderable('order')`) | |
 
-On update/delete, an observer deletes replaced files from storage. Avatars are converted to WebP (512×512) by a queued job using `intervention/image`.
+On update/delete, model events on `TeamMember` delete replaced or orphaned files from storage (absolute CV URLs are left alone). Uploads are stored under random UUID filenames. *Planned:* re-encode uploaded avatars to WebP (512×512) with a queued job (`intervention/image`) to strip metadata.
 
 ## 5. Seeded profiles
 
@@ -70,7 +70,7 @@ On update/delete, an observer deletes replaced files from storage. Avatars are c
 | 3 | يوسف القاسم / Yousef Al-Qasem | مهندس برمجيات متكامل / Full-Stack Engineer | Laravel, Next.js, Three.js, Docker |
 | 4 | نورة السبيعي / Noura Al-Subaie | مهندسة ذكاء اصطناعي / AI Engineer | LLMs, RAG, pgvector, Python |
 
-Seeds ship with placeholder avatars (`storage/app/public/team/avatars/placeholder-{1..4}.webp`, generated geometric initials) and sample one-page PDF CVs (`database/seeders/assets/cvs/*.pdf`) copied to the public disk by `TeamMemberSeeder`. Profiles are fictional demo data.
+`TeamMemberSeeder` generates the demo assets at seed time with no external dependencies (`database/seeders/Support/DemoAssets.php`): branded 512×512 WebP avatars (obsidian→orange/cyan gradient, node-graph motif, pixel initials, via GD) at `team/avatars/{key}.webp`, and one-page A4 PDF CVs (hand-built PDF 1.4, Helvetica) at `team/cvs/{key}-cv.pdf` on the public disk. Profile data lives in `database/seeders/data/team.php`. Profiles are fictional demo data.
 
 ## 6. API
 

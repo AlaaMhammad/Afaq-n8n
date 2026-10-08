@@ -23,7 +23,8 @@ flowchart LR
 |---------|---------------|--------|-------------|
 | `postgres` | `pgvector/pgvector:pg16` | `pgdata` volume, `docker/postgres/init.sql` → `/docker-entrypoint-initdb.d/` | `pg_isready -U $POSTGRES_USER -d $POSTGRES_DB` |
 | `redis` | `redis:alpine` (`--appendonly yes`) | `redisdata` volume | `redis-cli ping` |
-| `backend` | `docker/backend/Dockerfile` target `dev` | `./backend:/var/www/html` | `php-fpm -t` / `/up` via nginx |
+| `backend` | `docker/backend/Dockerfile` target `dev` | `./backend:/var/www/html` + named volumes `backend_vendor` → `vendor/`, `backend_framework` → `storage/framework/`, `composer_cache` | `vendor/autoload.php` present && `php-fpm -t` |
+| `queue` | same image as `backend` | same as `backend` | — (`php artisan queue:work redis --tries=3 --timeout=600`) |
 | `nginx` | `nginx:alpine` | `./backend/public` (ro), `docker/nginx/default.conf` | `wget -qO- http://localhost/up` |
 | `frontend` | `node:22-alpine` | `./frontend:/app`, anonymous volume `/app/node_modules` | `wget -qO- http://localhost:3000` |
 
@@ -34,16 +35,22 @@ flowchart LR
 ```bash
 cp .env.example .env                       # compose-level vars (ports, DB creds)
 cp backend/.env.example backend/.env       # Laravel vars
-docker compose up -d --build
-docker compose exec backend composer install
+docker compose up -d --build               # first start runs composer install into the vendor volume
 docker compose exec backend php artisan key:generate
-docker compose exec backend php artisan migrate --seed
+docker compose exec backend php artisan migrate --seed   # demo content + admin user
 docker compose exec backend php artisan storage:link
 docker compose exec backend php artisan rag:index-knowledge   # needs GEMINI_API_KEY (Phase 3)
 docker compose logs -f backend nginx
 ```
 
-Windows note: bind mounts from NTFS into Linux containers are slower; if `next dev` file-watching lags, set `WATCHPACK_POLLING=true` (already set in compose) or run the project inside WSL2.
+### Dev performance & permissions (Windows/macOS hosts)
+
+- **Hot paths live in named volumes.** Bind-mounted NTFS is slow for Linux containers (listing `vendor/` took ~85 s; Laravel booted in ~30 s). `vendor/` and `storage/framework/` are therefore Docker named volumes — boot drops to ~2 s and requests to ~0.2 s. App code stays bind-mounted for live editing.
+- `docker/backend/entrypoint-dev.sh` prepares those volumes on start (`composer install` when `vendor/` is empty, for the `backend` service only).
+- Consequence: the host `backend/vendor/` is **not** what the app runs; run Composer via `docker compose exec backend composer …`. (A host copy can still be installed for IDE autocompletion.)
+- `php.dev.ini` enables OPcache for CLI + FPM with `revalidate_freq=2` (edits appear within ~2 s).
+- Dev FPM workers run as **root** (`php-fpm --allow-to-run-as-root`) because host files surface as root-owned in bind mounts; artisan and web requests therefore share one owner. The `prod` target keeps non-root `www-data`.
+- If `next dev` file-watching lags, `WATCHPACK_POLLING=true` is already set; running the project inside WSL2 is faster still.
 
 ## 2. Backend image (`docker/backend/Dockerfile`)
 

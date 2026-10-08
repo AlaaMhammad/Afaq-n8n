@@ -158,11 +158,11 @@ Admin edits a knowledge document in Filament → clicks **Re-index knowledge** �
 ```
 backend/app/
 ├── Console/Commands/          # rag:index-knowledge
+├── Models/                    # Eloquent models (Laravel convention; Filament discovers them here)
 ├── Domain/                    # Pure business logic (no HTTP)
-│   ├── Catalog/               # Service, Project models + actions
-│   ├── Team/                  # TeamMember model, CV storage service
-│   ├── Inquiry/               # ServiceRequest model, CreateServiceRequest action, EstimateCalculator
-│   └── Knowledge/             # KnowledgeDocument model, Chunker
+│   ├── Catalog/               # WorkflowMetadata (3D graph normaliser/validator)
+│   ├── Inquiry/               # Enums, EstimateCalculator, ReferenceGenerator, CreateServiceRequest (Phase 3)
+│   └── Knowledge/             # KnowledgeCategory enum, Chunker (Phase 3)
 ├── Services/AI/
 │   ├── Contracts/             # LlmDriver, EmbeddingDriver, Tool
 │   ├── Drivers/Llm/           # GeminiLlmDriver, OllamaLlmDriver, FakeLlmDriver

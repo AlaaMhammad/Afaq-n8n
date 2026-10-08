@@ -20,8 +20,15 @@ WORKDIR /var/www/html
 # dev: code is bind-mounted by docker-compose
 ########################
 FROM base AS dev
-ENV APP_ENV=local
-CMD ["php-fpm"]
+# Dev only: Windows/macOS bind mounts surface host files as root-owned, so FPM workers run as
+# root too — artisan (via `docker compose exec`) and web requests then share one file owner.
+# The prod target below keeps the default non-root www-data workers.
+RUN printf '[www]\nuser = root\ngroup = root\n' > /usr/local/etc/php-fpm.d/zz-dev-user.conf
+COPY docker/backend/php.dev.ini /usr/local/etc/php/conf.d/zz-afaq-dev.ini
+COPY --chmod=755 docker/backend/entrypoint-dev.sh /usr/local/bin/afaq-entrypoint
+ENV COMPOSER_CACHE_DIR=/composer-cache
+ENTRYPOINT ["afaq-entrypoint"]
+CMD ["php-fpm", "--allow-to-run-as-root"]
 
 ########################
 # vendor: production dependencies (cached layer)

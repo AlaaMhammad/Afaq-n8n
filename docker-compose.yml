@@ -44,8 +44,14 @@ services:
       target: dev
     restart: unless-stopped
     working_dir: /var/www/html
-    volumes:
+    environment:
+      AUTO_COMPOSER_INSTALL: "1"
+    volumes: &backend-volumes
       - ./backend:/var/www/html
+      # Linux-native volumes for the hot paths: bind-mounted vendor/ is ~50x slower on Windows/macOS
+      - backend_vendor:/var/www/html/vendor
+      - backend_framework:/var/www/html/storage/framework
+      - composer_cache:/composer-cache
     extra_hosts:
       - "host.docker.internal:host-gateway" # reach a local Ollama instance
     depends_on:
@@ -54,10 +60,26 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php-fpm", "-t"]
+      test: ["CMD-SHELL", "test -f vendor/autoload.php && php-fpm -t"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 60
+      start_period: 30s
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: dev
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: ["php", "artisan", "queue:work", "redis", "--tries=3", "--timeout=600", "--sleep=2"]
+    volumes: *backend-volumes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine
@@ -102,3 +124,6 @@ services:
 volumes:
   pgdata:
   redisdata:
+  backend_vendor:
+  backend_framework:
+  composer_cache:
