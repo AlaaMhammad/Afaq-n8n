@@ -3,8 +3,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { HeroVisual } from "./hero-visual";
 
-/** Hero: status badge, headline, dual CTAs. The ambient 3D "automation core" mounts here in Phase 5. */
+/** Hero: status badge, headline, dual CTAs and the ambient 3D automation core. */
 export function HeroSection() {
   const t = useTranslations("hero");
   const Arrow = useLocale() === "ar" ? ArrowLeft : ArrowRight;
@@ -40,13 +41,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Placeholder for the R3F AutomationCore (Phase 5) */}
-        <div className="relative mx-auto hidden aspect-square w-full max-w-md lg:block" aria-hidden>
-          <div className="absolute inset-0 rounded-full border border-pulse/20" />
-          <div className="absolute inset-10 rounded-full border border-dashed border-accent/30" />
-          <div className="absolute inset-24 rounded-full bg-accent/10 shadow-glow-accent" />
-          <div className="absolute inset-[38%] animate-pulse-ring rounded-full bg-accent shadow-glow-accent" />
-        </div>
+        <HeroVisual />
       </Container>
     </section>
   );

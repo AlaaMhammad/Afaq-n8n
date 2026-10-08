@@ -172,3 +172,17 @@ Stores are created with `create<State>()(devtools(...))` in development only; no
 - **Validation:** `src/lib/agent/actions.ts` (zod discriminated union) drops unknown action types and malformed payloads before they reach the stores.
 - **Verified live:** a Copilot message in Arabic ("اعرض لي مشروع مستخرج الفواتير مفككاً") streamed from Gemini. The `trigger_3d_workflow` action switched the portfolio to the invoice project, exploded it, highlighted the nav item and showed an Arabic toast.
 - **Dev/E2E hook:** in non-production builds `window.__afaq = { agent, scene }` exposes the stores for Playwright and manual checks.
+
+## 7. As built (Phase 5)
+
+- **`setMode(mode, source)`** takes `source: "user" | "agent" | "scroll"` (default `"user"`). Scroll-sourced changes apply only while `autoExplode` is true. The first user or agent change sets it to false for the visit. `AgentActionRunner` passes `"agent"`.
+- **Quality**:
+  - `detectQuality(tier)`: records the device tier once.
+  - `setQuality(tier)`: the visitor's 2D/3D switch. It **pins** the tier.
+  - `adaptQuality("up" | "down")`: used by PerformanceMonitor. It moves only between high and low and respects the pin.
+  - `fallbackTo2d(reason)`: reason is `performance`, `unsupported`, `context-lost` or `error`. `performance` respects the pin.
+  - `recover3d()`: remounts the canvas once after the first context loss.
+
+  `fallbackReason` drives the localized notice. `renderAttempt` keys each canvas mount, so a remount fades in only after its own first frame.
+- **`explodeProgress`** is the mean of the per-node springs, written by `WorkflowWorld` when it changes. DOM code should still read `mode`.
+- **Selection and hover** (`selectedNodeId`, `hoveredNodeId`) are shared by the 3D scene, the 2D diagram and the step list, so hovering any of them highlights the other two. Escape or a click on empty canvas clears the selection, and the camera glides back.

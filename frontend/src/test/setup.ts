@@ -16,3 +16,5 @@ if (!window.matchMedia) {
   });
 }
 Element.prototype.scrollIntoView ??= function () {};
+// No WebGL in jsdom: the 3D scenes fall back to the 2D diagram (as on unsupported browsers).
+HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement["getContext"];

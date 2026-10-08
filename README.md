@@ -54,7 +54,7 @@ Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agen
 2. ✅ Database schema, realistic seeders, Filament admin
 3. ✅ RAG pipeline, AI agent with tool calling, n8n webhook
 4. ✅ Public API, frontend foundations: theme, RTL/LTR, Zustand bridge, UI kit
-5. 3D canvas and exploded workflows
+5. ✅ 3D canvas (R3F): procedural n8n nodes, laser edges with data packets, exploded view, quality tiers and 2D fallback
 6. Core sections and Copilot UI
 7. Testing, hardening, deployment
 

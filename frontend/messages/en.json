@@ -38,7 +38,8 @@
     "title": "Automation that runs quietly. Results you can see.",
     "subtitle": "We engineer n8n workflows and Arabic-first AI agents, and connect your company's systems into one reliable data flow.",
     "primaryCta": "Book a free consultation",
-    "secondaryCta": "Explore our 3D portfolio"
+    "secondaryCta": "Explore our 3D portfolio",
+    "coreLabel": "Animated automation core orbited by nodes and data packets"
   },
   "services": {
     "eyebrow": "What we do",
@@ -57,7 +58,24 @@
     "hoursSaved": "Hours saved / month",
     "explode": "Explode",
     "assemble": "Assemble",
-    "viewerSoon": "The 3D viewer is under construction — the interactive workflow appears here."
+    "view3d": "3D view",
+    "view2d": "2D view",
+    "steps": "Workflow steps",
+    "orbitHint": "Drag to orbit · double-click to explode",
+    "touchHint": "Tap a node to inspect it",
+    "sceneLabel": "Interactive 3D model of the “{title}” workflow with {count} nodes",
+    "loading3d": "Loading the 3D viewer…",
+    "fallbackPerformance": "Switched to the 2D view to keep things smooth.",
+    "fallbackUnsupported": "Your browser does not support WebGL, so we show the 2D diagram.",
+    "fallbackError": "The 3D viewer could not start, so we show the 2D diagram.",
+    "selectHint": "Pick a step from the list or the model to see its details.",
+    "kinds": {
+      "trigger": "Trigger",
+      "router": "Router",
+      "action": "Action",
+      "ai": "AI",
+      "storage": "Storage"
+    }
   },
   "team": {
     "eyebrow": "Our team",

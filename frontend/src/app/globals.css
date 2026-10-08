@@ -72,6 +72,13 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
   }
+
+  /* Data flowing along 2D diagram edges (dash pattern 6 6 → one period = 12px). */
+  --animate-dash: dash 0.9s linear infinite;
+
+  @keyframes dash {
+    to { stroke-dashoffset: -12; }
+  }
 }
 
 @layer base {

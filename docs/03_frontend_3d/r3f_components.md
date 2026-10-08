@@ -171,3 +171,69 @@ src/components/three/
 | Draw calls (portfolio scene) | ≤ 60 |
 | Mobile frame time (mid-range Android) | ≤ 22 ms (≥ 45 fps) on `low` |
 | LCP impact | none — canvas hydrates after LCP; poster image shown first |
+
+## 10. As built (Phase 5)
+
+Where this section differs from §1–§9, this section wins (ADR-015/016/017).
+
+```
+src/components/three/
+├── scene-canvas.tsx          # Canvas wrapper: frameloop "never" off-screen, DPR/AA by tier, PerformanceMonitor,
+│                             # context-loss + error-boundary → 2D fallback, first-frame onReady
+├── lighting.tsx              # ambient + key + orange/cyan rims + procedural <Environment> (Lightformers, no HDR download)
+├── effects.tsx               # lazy Bloom (luminanceThreshold 1 → only HDR glow parts bloom); high/medium + dark only
+├── hero/automation-core.tsx  # hero centrepiece (transparent canvas, halo sprites instead of post-processing)
+├── workflow/
+│   ├── workflow-canvas.tsx   # default export, loaded with next/dynamic({ ssr: false })
+│   ├── workflow-sim.ts       # per-node springs, hover "peek", live positions (pure, unit-tested)
+│   ├── workflow-node.tsx     # positions a node per frame, hover/select → scene store, projects its label
+│   ├── node-meshes.tsx       # trigger · router · action · ai · storage (shell + core explode)
+│   ├── workflow-edge.tsx     # dashed fat line ("laser"), port sockets, instanced packets (orange → cyan)
+│   ├── camera-rig.tsx        # glides to the fitted overview / selected node; OrbitControls on fine pointers only
+│   └── label-layer.tsx       # single DOM label layer (ADR-016)
+└── utils/{spring,quality,camera,edge,textures}.ts
+src/components/portfolio/     # DOM side: WorkflowStage, WorkflowDiagram2D (poster + fallback), WorkflowSteps, useScrollExplode
+src/lib/hooks/                # useMediaQuery/useReducedMotion/useFinePointer, useSceneSupport/useIdle/useNearViewport
+src/lib/theme/palette.ts      # TS mirror of the colour tokens for Three.js
+```
+
+**Explode/assemble triggers.** All four drive one value: `sceneStore.mode`.
+- *Click*: the Explode/Assemble button, or a double-click on the canvas.
+- *Scroll*: at ≥ 60 % in view the workflow explodes after 650 ms, and reassembles once fully out of view. It replays on a project switch, and stops for the visit once the visitor or the agent sets a mode.
+- *Hover*: the node "peeks", opening its own shell and core. This also works on the 2D diagram and the step list.
+- *AI*: `trigger_3d_workflow` → `setMode(mode, "agent")`.
+
+**Exploded view** works at two levels:
+- The workflow spreads nodes along `position + exploded × spring`.
+- Each node splits its own geometry: trigger cage, router band and fins, action lid and base around a glowing core, AI glass shell and brain, storage platters.
+
+**Quality tiers** (`utils/quality.ts`):
+
+| Tier | DPR | Bloom | MSAA | Packets / edge | AI glass |
+|------|-----|-------|------|----------------|----------|
+| high | 1–2 | 1.15 | 4 | 24 | transmission |
+| medium | 1–1.5 | 0.8 | — | 12 | translucent |
+| low | 1 | — | — | 6 | translucent |
+| fallback2d | — | — | — | — | SVG/DOM diagram |
+
+- **Initial tier:**
+  - `low`: data-saver, ≤ 4 cores, ≤ 4 GB memory, or a phone (coarse pointer under 768 px)
+  - `medium`: a tablet or ≤ 6 cores
+  - `high`: everything else
+- **At runtime:** drei `PerformanceMonitor` steps the tier between high and low. Its `onFallback` switches to 2D unless the visitor pinned 3D with the 2D/3D switch.
+
+**Resilience.** Each failure case and what happens:
+
+| Situation | Result |
+|---|---|
+| No WebGL | 2D diagram plus a notice |
+| Render error | Error boundary → 2D |
+| First WebGL context loss | 2D, then one automatic remount after 1.5 s (`renderAttempt` keys the canvas) |
+| Second context loss | Stays in 2D |
+| Off-screen | `frameloop="never"` |
+| Reduced motion | Instant transitions, static packets, no sway or parallax, camera snaps |
+| Touch devices | No OrbitControls, so the page keeps scrolling natively |
+
+**Bundle** (production build): three.js, R3F and drei are absent from the initial JS. The lazy 3D core is about 232 KB gzipped, plus about 8 KB per scene; Bloom is a separate ~21 KB chunk.
+
+**RTL**: `localizeWorkflow()` mirrors X, so Arabic workflows flow right → left. Labels are DOM text with `dir="auto"`, so Arabic shapes correctly.

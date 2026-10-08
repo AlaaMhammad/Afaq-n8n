@@ -16,3 +16,6 @@ desktop.ini
 
 # Logs
 *.log
+
+# Local Claude Code / editor launch configs
+.claude/

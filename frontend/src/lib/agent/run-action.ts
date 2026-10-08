@@ -50,7 +50,7 @@ export async function runAgentAction(action: AgentAction, effects: ActionEffects
       }
       await scrollToSection("portfolio");
       if (!prefersReducedMotion()) await wait(CAMERA_SETTLE_MS);
-      useSceneStore.getState().setMode(action.payload.mode);
+      useSceneStore.getState().setMode(action.payload.mode, "agent");
       effects.notify(action, "ok");
       return;
     }

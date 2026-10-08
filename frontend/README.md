@@ -17,7 +17,7 @@ The backend (`docker compose up -d postgres redis backend queue nginx` from the 
 | `npm run dev` | Next.js dev server (Turbopack) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (stores, SSE client, agent bridge, sections) |
+| `npm test` | Vitest (stores, SSE client, agent bridge, sections, 3D physics/camera/quality utils) |
 
 ## Layout
 
@@ -29,12 +29,17 @@ src/
 ├── components/
 │   ├── ui/              shared kit: Button, Card, Badge, Input/Textarea, Label, Dialog, Tooltip, Skeleton, Separator, Toaster, icons
 │   ├── layout/          Container, SectionShell, SiteHeader, SiteFooter, ThemeToggle, LocaleSwitcher, SectionObserver
-│   ├── sections/        Hero, Services, Portfolio (2D workflow explorer until the 3D canvas), Team (+ CV dialog), Booking
+│   ├── sections/        Hero (+ 3D core), Services, Portfolio explorer, Team (+ CV dialog), Booking
+│   ├── portfolio/       Workflow stage (3D ⇄ 2D), 2D diagram (SSR poster + fallback), step list, scroll reveal
+│   ├── three/           R3F scenes: canvas wrapper, workflow nodes/edges/packets, camera rig, label layer, hero core
 │   ├── assistant/       AgentActionRunner (AI agent → page bridge)
 │   └── providers/       next-themes + tooltip providers
 ├── stores/              Zustand: scene (3D), agent (Copilot + action queue), ui
-└── lib/                 api (client, cached content fetchers, SSE client, booking), agent (action schemas + runner), utils
+└── lib/                 api (client, cached content fetchers, SSE client, booking), agent (action schemas + runner),
+                         hooks (media queries, WebGL/idle/viewport), theme palette for Three.js, utils
 messages/{ar,en}.json    UI copy (type-checked keys)
 ```
 
-Architecture notes: `docs/03_frontend_3d/theme_and_i18n.md` §8 and `docs/01_architecture/state_management.md` §6.
+Architecture notes: `docs/03_frontend_3d/theme_and_i18n.md` §8, `docs/03_frontend_3d/r3f_components.md` §10 and `docs/01_architecture/state_management.md` §6–7.
+
+3D is client-only and code-split: the 2D diagram is server-rendered, the R3F chunk loads near the portfolio (hero: on idle, ≥ 1024 px). In development `window.__afaq.scene.getState()` exposes the scene store, e.g. `setQuality('high')` or `setMode('exploded')`.

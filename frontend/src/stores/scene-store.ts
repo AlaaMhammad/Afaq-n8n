@@ -11,8 +11,13 @@ import type { Vec3, WorkflowMode } from "@/lib/api/types";
  */
 
 export type QualityTier = "high" | "medium" | "low" | "fallback2d";
+/** Who changed the mode: user clicks and the AI agent stop scroll-driven explode for the visit. */
+export type ModeSource = "user" | "agent" | "scroll";
+/** Why the 3D canvas was swapped for the 2D diagram. */
+export type FallbackReason = "user" | "performance" | "unsupported" | "context-lost" | "error";
 
 const QUALITY_ORDER: QualityTier[] = ["high", "medium", "low", "fallback2d"];
+const LOWEST_3D_INDEX = QUALITY_ORDER.indexOf("low");
 
 export interface CameraGoal {
   position: Vec3;
@@ -31,19 +36,39 @@ export interface SceneState {
   selectedNodeId: string | null;
   hoveredNodeId: string | null;
   cameraGoal: CameraGoal | null;
+  /** While true, scrolling the portfolio into view explodes/assembles the workflow. */
+  autoExplode: boolean;
   quality: QualityTier;
+  /** Tier detected from the device on first client render (null until then). */
+  detectedQuality: QualityTier | null;
+  /** The visitor chose 2D/3D explicitly — performance heuristics no longer override it. */
+  qualityPinned: boolean;
+  fallbackReason: FallbackReason | null;
+  /** WebGL context losses this visit — the first one is recovered automatically. */
+  contextLosses: number;
+  /** Incremented every time a 3D canvas should (re)mount — keys the canvas and its "ready" state. */
+  renderAttempt: number;
   autoRotate: boolean;
 
   registerProjects: (projects: { slug: string; title: string }[]) => void;
   /** Returns false (and changes nothing) for an unknown slug. */
   setActiveProject: (slug: string) => boolean;
-  setMode: (mode: WorkflowMode) => void;
+  /** Scroll-sourced changes are ignored once the user or the agent has set a mode. */
+  setMode: (mode: WorkflowMode, source?: ModeSource) => void;
   toggleMode: () => void;
   selectNode: (id: string | null) => void;
   hoverNode: (id: string | null) => void;
   focusCamera: (goal: CameraGoal | null) => void;
+  /** Records the device tier once; later calls are no-ops. */
+  detectQuality: (tier: QualityTier) => void;
+  /** Explicit visitor choice (the 2D/3D switch). Pins the tier. */
   setQuality: (quality: QualityTier) => void;
-  stepQuality: (direction: "down" | "up") => void;
+  /** Automatic step from the frame-rate monitor; stays within the 3D tiers and respects a pin. */
+  adaptQuality: (direction: "down" | "up") => void;
+  /** Swap to the 2D diagram. A sustained-slow-frames fallback respects a visitor's pin. */
+  fallbackTo2d: (reason: Exclude<FallbackReason, "user">) => void;
+  /** After a first context loss, remount the 3D canvas with a fresh context. Later losses stay 2D. */
+  recover3d: () => void;
   setAutoRotate: (enabled: boolean) => void;
   /** internal — written by the ExplodeDriver tween only */
   _setExplodeProgress: (progress: number) => void;
@@ -60,7 +85,13 @@ export const useSceneStore = create<SceneState>()(
       selectedNodeId: null,
       hoveredNodeId: null,
       cameraGoal: null,
+      autoExplode: true,
       quality: "high",
+      detectedQuality: null,
+      qualityPinned: false,
+      fallbackReason: null,
+      contextLosses: 0,
+      renderAttempt: 0,
       autoRotate: true,
 
       registerProjects: (projects) =>
@@ -83,16 +114,43 @@ export const useSceneStore = create<SceneState>()(
         return true;
       },
 
-      setMode: (mode) => set({ mode }),
-      toggleMode: () => set((state) => ({ mode: state.mode === "exploded" ? "assembled" : "exploded" })),
+      setMode: (mode, source = "user") =>
+        set((state) => {
+          if (source === "scroll") return state.autoExplode ? { mode } : state;
+          return { mode, autoExplode: false };
+        }),
+      toggleMode: () => set((state) => ({ mode: state.mode === "exploded" ? "assembled" : "exploded", autoExplode: false })),
       selectNode: (selectedNodeId) => set({ selectedNodeId }),
       hoverNode: (hoveredNodeId) => set({ hoveredNodeId }),
       focusCamera: (cameraGoal) => set({ cameraGoal }),
-      setQuality: (quality) => set({ quality }),
-      stepQuality: (direction) =>
+      detectQuality: (tier) =>
         set((state) => {
+          if (state.detectedQuality !== null) return state;
+          return state.qualityPinned ? { detectedQuality: tier } : { detectedQuality: tier, quality: tier, fallbackReason: tier === "fallback2d" ? "performance" : null };
+        }),
+      setQuality: (quality) =>
+        set((state) => ({
+          quality,
+          qualityPinned: true,
+          fallbackReason: quality === "fallback2d" ? "user" : null,
+          renderAttempt: state.quality === "fallback2d" && quality !== "fallback2d" ? state.renderAttempt + 1 : state.renderAttempt,
+        })),
+      adaptQuality: (direction) =>
+        set((state) => {
+          if (state.qualityPinned || state.quality === "fallback2d") return state;
           const index = QUALITY_ORDER.indexOf(state.quality) + (direction === "down" ? 1 : -1);
-          return { quality: QUALITY_ORDER[Math.min(Math.max(index, 0), QUALITY_ORDER.length - 1)] };
+          return { quality: QUALITY_ORDER[Math.min(Math.max(index, 0), LOWEST_3D_INDEX)] };
+        }),
+      fallbackTo2d: (reason) =>
+        set((state) => {
+          if (reason === "performance" && state.qualityPinned) return state;
+          return { quality: "fallback2d", fallbackReason: reason, contextLosses: state.contextLosses + (reason === "context-lost" ? 1 : 0) };
+        }),
+      recover3d: () =>
+        set((state) => {
+          if (state.quality !== "fallback2d" || state.fallbackReason !== "context-lost" || state.contextLosses > 1) return state;
+          const tier = state.detectedQuality === null || state.detectedQuality === "fallback2d" ? "low" : state.detectedQuality;
+          return { quality: tier, fallbackReason: null, renderAttempt: state.renderAttempt + 1 };
         }),
       setAutoRotate: (autoRotate) => set({ autoRotate }),
       _setExplodeProgress: (progress) => set({ explodeProgress: Math.min(1, Math.max(0, progress)) }),
@@ -102,3 +160,5 @@ export const useSceneStore = create<SceneState>()(
 );
 
 export const selectIsExploded = (state: SceneState) => state.mode === "exploded";
+/** True once the device tier is known and it is a 3D tier. */
+export const selectWants3d = (state: SceneState) => state.detectedQuality !== null && state.quality !== "fallback2d";

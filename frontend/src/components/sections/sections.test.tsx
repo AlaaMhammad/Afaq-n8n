@@ -52,7 +52,19 @@ const project = (slug: string, title: string): Project => ({
 });
 
 beforeEach(() => {
-  useSceneStore.setState({ knownProjects: [], projectTitles: {}, activeProjectSlug: null, mode: "assembled", selectedNodeId: null });
+  useSceneStore.setState({
+    knownProjects: [],
+    projectTitles: {},
+    activeProjectSlug: null,
+    mode: "assembled",
+    autoExplode: true,
+    selectedNodeId: null,
+    hoveredNodeId: null,
+    quality: "high",
+    detectedQuality: null,
+    qualityPinned: false,
+    fallbackReason: null,
+  });
   useUiStore.setState({ bookingPrefill: null, activeSection: "hero" });
 });
 
@@ -105,11 +117,39 @@ describe("PortfolioExplorer", () => {
     expect(useSceneStore.getState().mode).toBe("exploded");
   });
 
-  it("shows node details when a node is selected", () => {
+  it("lists the steps in flow order and shows details for the selected node", () => {
+    withIntl(<PortfolioExplorer projects={projects} />);
+    const steps = screen.getByRole("list");
+    expect(within(steps).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      expect.stringContaining("Omni In"),
+      expect.stringContaining("Omni Out"),
+    ]);
+
+    fireEvent.click(within(steps).getByRole("button", { name: /Omni Out/ }));
+
+    expect(useSceneStore.getState().selectedNodeId).toBe("out");
+    expect(screen.getByText("hubspot")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(useSceneStore.getState().selectedNodeId).toBeNull();
+  });
+
+  it("falls back to the 2D diagram with a notice when WebGL is unavailable", () => {
+    withIntl(<PortfolioExplorer projects={projects} />);
+    const stage = document.querySelector("[data-active-project]")!;
+
+    expect(stage).toHaveAttribute("data-view", "2d");
+    expect(useSceneStore.getState()).toMatchObject({ quality: "fallback2d", fallbackReason: "unsupported" });
+    expect(screen.getByText(/does not support WebGL/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "3D view" })).not.toBeInTheDocument();
+    // Diagram nodes stay interactive buttons
+    expect(within(stage as HTMLElement).getByRole("button", { name: /Omni In/ })).toBeInTheDocument();
+  });
+
+  it("syncs hover between the step list and the scene", () => {
     withIntl(<PortfolioExplorer projects={projects} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Omni Out/ }));
-
-    expect(screen.getByText("hubspot")).toBeInTheDocument();
+    fireEvent.pointerEnter(within(screen.getByRole("list")).getByRole("button", { name: /Omni In/ }));
+    expect(useSceneStore.getState().hoveredNodeId).toBe("in");
   });
 });
