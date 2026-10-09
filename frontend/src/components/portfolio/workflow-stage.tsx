@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Box, Boxes, Loader2, Square } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -26,9 +26,10 @@ interface WorkflowStageProps {
 }
 
 /**
- * The portfolio stage: the 2D diagram renders on the server as a poster, the 3D canvas loads
- * as the section approaches and cross-fades in on its first frame. Any failure (no WebGL,
- * context loss, render error, sustained low frame-rate) lands back on the 2D diagram.
+ * The portfolio stage: the 2D diagram renders on the server as a poster; the 3D workflow is a view
+ * of the shared stage canvas that loads as the section approaches and cross-fades in on its first
+ * frame. Any failure (no WebGL, context loss, render error, sustained low frame-rate) lands back
+ * on the 2D diagram. The stage is transparent while 3D is live: the canvas renders behind the page.
  */
 export function WorkflowStage({ workflow, projectSlug, projectTitle, locale }: WorkflowStageProps) {
   const t = useTranslations("portfolio");
@@ -47,16 +48,11 @@ export function WorkflowStage({ workflow, projectSlug, projectTitle, locale }: W
   const renderAttempt = useSceneStore((s) => s.renderAttempt);
   const [readyAttempt, setReadyAttempt] = useState<number | null>(null);
   const ready = readyAttempt === renderAttempt;
+  const stageUp = useSceneStore((s) => s.stage !== "off");
   useScrollExplode(stage);
 
-  // A lost WebGL context (GPU reset, driver hiccup, too many contexts) gets one fresh canvas.
-  useEffect(() => {
-    if (fallbackReason !== "context-lost") return;
-    const timer = setTimeout(() => useSceneStore.getState().recover3d(), 1500);
-    return () => clearTimeout(timer);
-  }, [fallbackReason]);
-
-  const show3d = webgl === true && wants3d && near;
+  // The scene is a view of the page's shared stage canvas (mounted by <StageRoot/>).
+  const show3d = webgl === true && wants3d && stageUp && near;
   const live3d = show3d && ready;
   const canToggle = webgl === true && detectedQuality !== null;
 
@@ -83,7 +79,8 @@ export function WorkflowStage({ workflow, projectSlug, projectTitle, locale }: W
       data-active-project={projectSlug}
       data-mode={exploded ? "exploded" : "assembled"}
       data-view={live3d ? "3d" : "2d"}
-      className="relative isolate h-80 overflow-hidden rounded-2xl border border-border bg-surface/60 sm:h-[26rem] lg:h-[28rem]"
+      data-stage-anchor="portfolio"
+      className={cn("relative isolate h-80 overflow-hidden rounded-2xl border border-border transition-colors sm:h-[26rem] lg:h-[28rem]", live3d ? "bg-transparent" : "bg-surface/60")}
     >
       <WorkflowDiagram2D workflow={workflow} exploded={exploded} concealed={live3d} />
 
@@ -97,6 +94,7 @@ export function WorkflowStage({ workflow, projectSlug, projectTitle, locale }: W
               count: workflow.nodes.length,
             })}
             theme={resolvedTheme}
+            flow={locale === "ar" ? -1 : 1}
             onReady={() => setReadyAttempt(renderAttempt)}
           />
         </div>

@@ -31,7 +31,8 @@ src/
 │   ├── layout/          Container, SectionShell, SiteHeader, SiteFooter, ThemeToggle, LocaleSwitcher, SectionObserver
 │   ├── sections/        Hero (+ 3D core), Services, Portfolio explorer, Team (+ CV dialog), Booking
 │   ├── portfolio/       Workflow stage (3D ⇄ 2D), 2D diagram (SSR poster + fallback), step list, scroll reveal
-│   ├── three/           R3F scenes: canvas wrapper, workflow nodes/edges/packets, camera rig, label layer, hero core
+│   ├── stage/           StageRoot (mounts the single background canvas), StageSlot (per-section 3D slot + poster)
+│   ├── three/           single-canvas stage, procedural hardware kit, scenes (hero switch, rack, neural core, terminal), portfolio workflow
 │   ├── assistant/       Copilot widget (launcher + lazy panel), markdown, composer, AgentActionRunner
 │   ├── booking/         5-step booking & live estimator (react-hook-form + zod)
 │   └── providers/       next-themes + tooltip providers

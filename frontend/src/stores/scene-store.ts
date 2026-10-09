@@ -48,6 +48,10 @@ export interface SceneState {
   contextLosses: number;
   /** Incremented every time a 3D canvas should (re)mount — keys the canvas and its "ready" state. */
   renderAttempt: number;
+  /** The single background canvas: off (2D), mounting, or rendering frames. */
+  stage: "off" | "loading" | "live";
+  /** The hero's trigger switch is closed: the page's data conduits are energised. */
+  powered: boolean;
   autoRotate: boolean;
 
   registerProjects: (projects: { slug: string; title: string }[]) => void;
@@ -69,6 +73,8 @@ export interface SceneState {
   fallbackTo2d: (reason: Exclude<FallbackReason, "user">) => void;
   /** After a first context loss, remount the 3D canvas with a fresh context. Later losses stay 2D. */
   recover3d: () => void;
+  setStage: (stage: "off" | "loading" | "live") => void;
+  setPowered: (powered: boolean) => void;
   setAutoRotate: (enabled: boolean) => void;
   /** internal — written by the ExplodeDriver tween only */
   _setExplodeProgress: (progress: number) => void;
@@ -92,6 +98,8 @@ export const useSceneStore = create<SceneState>()(
       fallbackReason: null,
       contextLosses: 0,
       renderAttempt: 0,
+      stage: "off",
+      powered: false,
       autoRotate: true,
 
       registerProjects: (projects) =>
@@ -153,6 +161,8 @@ export const useSceneStore = create<SceneState>()(
           return { quality: tier, fallbackReason: null, renderAttempt: state.renderAttempt + 1 };
         }),
       setAutoRotate: (autoRotate) => set({ autoRotate }),
+      setStage: (stage) => set({ stage }),
+      setPowered: (powered) => set({ powered }),
       _setExplodeProgress: (progress) => set({ explodeProgress: Math.min(1, Math.max(0, progress)) }),
     }),
     { name: "scene", enabled: process.env.NODE_ENV === "development" },

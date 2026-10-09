@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ServiceIcon } from "@/components/ui/icons";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { SectionShell } from "@/components/layout/section-shell";
+import { StageSlot } from "@/components/stage/stage-slot";
 import { AskCopilotButton } from "./hero-prompts";
 import { RequestServiceButton } from "./request-service-button";
 import { SectionUnavailable } from "./section-unavailable";
@@ -31,15 +32,26 @@ export function ServicesSection({ services }: { services: Service[] | null }) {
   }
 
   const spans = bentoSpans(services.length + 1);
+  const rack = services.map((service) => ({
+    slug: service.slug,
+    title: service.title,
+    caption: service.starting_price !== null ? `${t("common.startingFrom")} $${service.starting_price.toLocaleString("en-US")}` : "n8n",
+  }));
 
   return (
-    <SectionShell id="services" eyebrow={t("services.eyebrow")} title={t("services.title")} subtitle={t("services.subtitle")}>
+    <SectionShell
+      id="services"
+      eyebrow={t("services.eyebrow")}
+      title={t("services.title")}
+      subtitle={t("services.subtitle")}
+      visual={<StageSlot scene="services" locale={locale as "ar" | "en"} data={rack} label={t("services.rackLabel")} className="h-72 lg:h-80" />}
+    >
       <ul className="grid auto-rows-[minmax(15rem,auto)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service, index) => {
           const featured = index === 0;
           const span = spans[index];
           return (
-            <li key={service.id} className={cn(COL_SPAN[span.col], ROW_SPAN[span.row], featured && "sm:col-span-2")}>
+            <li key={service.id} data-focus-service={service.slug} className={cn(COL_SPAN[span.col], ROW_SPAN[span.row], featured && "sm:col-span-2")}>
               <SpotlightCard className={cn("flex h-full flex-col", featured && "bg-gradient-to-br from-accent/10 via-surface/80 to-surface/80 sm:p-8")}>
                 <span
                   className={cn(

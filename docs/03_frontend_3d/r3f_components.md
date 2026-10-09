@@ -237,3 +237,70 @@ src/lib/theme/palette.ts      # TS mirror of the colour tokens for Three.js
 **Bundle** (production build): three.js, R3F and drei are absent from the initial JS. The lazy 3D core is about 232 KB gzipped, plus about 8 KB per scene; Bloom is a separate ~21 KB chunk.
 
 **RTL**: `localizeWorkflow()` mirrors X, so Arabic workflows flow right → left. Labels are DOM text with `dir="auto"`, so Arabic shapes correctly.
+
+## 11. As built (visual overhaul, 2026-10-09)
+
+Supersedes §10 where they differ (ADR-020/021/022).
+
+```
+src/components/stage/
+├── stage-root.tsx          # mounts the stage on idle when WebGL + a 3D tier; context-loss remount
+├── stage-slot.tsx          # DOM placeholder + 2D poster; lazy-loads its scene while near the viewport
+└── stage-focus-bridge.tsx  # data-focus-service / data-focus-member hover+focus → ui store
+src/components/three/
+├── stage/
+│   ├── stage-canvas.tsx    # THE canvas: fixed, transparent, behind the page; View.Port + PerformanceMonitor
+│   ├── stage-view.tsx      # <View> + own camera, studio lights, 64px Lightformer env; useSectionProgress()
+│   └── conduit-scene.tsx   # full-viewport ortho view: page-length data conduits, scroll-energised
+├── hardware/
+│   ├── parts.tsx           # chamferedBox() geometry, Chassis, AcrylicCover, Pcb, Pins, Led, Halo
+│   ├── hardware-node.tsx   # n8n node: chassis / PCB / acrylic cover layers, I/O pins, decal, LEDs
+│   ├── cable.tsx           # tube patch cable (sheath + glowing conductor) with instanced packets
+│   ├── textures.ts         # canvas textures: PCB traces, cover decal, rack panel, profile chip (cached)
+│   └── decal-text.ts       # n8n type → integration name, port counts, monograms (unit-tested)
+├── scenes/                 # one lazy chunk per vignette
+│   ├── hero-switch.tsx     # high-voltage knife switch → closes on scroll/click, arcs, powers conduits
+│   ├── server-rack.tsx     # services: blades slide out staggered on scroll; hovered service pulls further
+│   ├── neural-core.tsx     # team: profile chips emerge from a neural core; hovered member comes forward
+│   └── node-terminal.tsx   # booking: chosen service cartridge snaps into the pipeline; sockets per step
+└── workflow/               # portfolio view: WorkflowSim + hardware nodes + cables (+ DOM label layer)
+src/lib/stage/progress.ts   # travelProgress, staggered, snapEase, smoothstep (unit-tested)
+```
+
+**Rendering model.** `StageCanvas` sits fixed behind the content (`z-index:-1`; the body background propagates to the root canvas, so it stays visible). Each scene is a drei `View` laid over its DOM slot:
+- Views render in `index` order: conduits (1), hero (2), rack (3), portfolio (4), team (5), terminal (6).
+- Views clip to their slot and are skipped when off-screen.
+- Sections stay transparent where a view shows. The portfolio stage drops its surface tint while 3D is live.
+- Pointer events reach a view through its DOM element. Labels and overlays are `pointer-events:none`.
+
+**Scrollytelling.**
+- `useSectionProgress(id)` gives each scene its section's travel through the viewport, from 0 (entering) to 1 (leaving), updated every frame without re-rendering.
+- The rack and the neural core use `staggered()` + `snapEase()`, so parts slide out one after another and click into place.
+- The portfolio keeps the spring simulation. Its overshoot below 0 on assemble presses the layers together: the "snap back into execution".
+- **Conduits:** the path is a centripetal Catmull-Rom curve in CSS pixels through every `[data-stage-anchor]`, running down the outer gutter (left in RTL). It is rebuilt on resize or layout change.
+- **Energy:** once the hero switch is closed (scroll > 40 px or a click, `sceneStore.powered`), the lit tube's `drawRange` grows to just below the fold and packets ride the lit part.
+
+**Hardware node explode layers** (`separation` from 0 to ~1, may overshoot):
+
+| Part | Movement as the node explodes |
+|---|---|
+| Chassis | drops 0.32 |
+| PCB | rises 0.42 |
+| Acrylic cover with decal | rises 0.95 and tilts |
+| Pins | slide outward |
+| Trigger lever | flips |
+| AI / router core | spins up |
+
+Cables plug into the pin tips (`PIN_REACH`). Tube geometry is rebuilt only when an end moves.
+
+**Fallbacks.** Any of these keeps the 2D posters, and `fallbackReason` drives the portfolio notice:
+- no WebGL
+- the `fallback2d` tier (the visitor's switch or sustained low FPS)
+- a stage render error
+- a second context loss (the first remounts the stage once)
+
+`StageSlot` reserves its layout box, so swapping between poster and 3D never shifts the page.
+
+**Budget.** No downloaded assets. The 3D JavaScript is ~243 KB gzipped, lazy (three + R3F + drei ~234 KB, plus small scene chunks). The initial page JS is ~313 KB gzipped.
+
+**Verification status.** Unit tests cover progress maths, conduit routing, decals and the simulation (77 frontend tests pass); typecheck, lint and the production build pass. **These scenes have not yet been inspected visually in a browser.** Check them on the next run with a visible browser: dark/light, ar/en, 375–1440 px.

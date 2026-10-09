@@ -39,7 +39,7 @@
     "subtitle": "We engineer n8n workflows and Arabic-first AI agents, and connect your company's systems into one reliable data flow.",
     "primaryCta": "Book a free consultation",
     "secondaryCta": "Explore our 3D portfolio",
-    "coreLabel": "Animated automation core orbited by nodes and data packets",
+    "coreLabel": "An n8n trigger built as a high-voltage switch that powers the data conduits running down the page",
     "askCopilot": "Ask the Copilot",
     "tryAsking": "Try asking the Copilot",
     "prompts": {
@@ -52,7 +52,8 @@
       "runs": "Runs / month",
       "hours": "Hours saved / month"
     },
-    "coreHint": "Click the core to send a data burst"
+    "coreHint": "Scroll or click the switch to power up the workflow",
+    "switchOn": "Circuit closed — data is flowing"
   },
   "services": {
     "eyebrow": "What we do",
@@ -63,7 +64,8 @@
     "customTitle": "Something more custom?",
     "customBody": "Describe your process in your own words — the Copilot maps it to the right automation and can book it for you.",
     "customCta": "Ask the Copilot",
-    "customPrompt": "I need a custom automation. Can you help me scope it?"
+    "customPrompt": "I need a custom automation. Can you help me scope it?",
+    "rackLabel": "A server rack whose service blades slide out as you scroll"
   },
   "portfolio": {
     "eyebrow": "Portfolio",
@@ -109,7 +111,8 @@
     "languages": {
       "ar": "Arabic",
       "en": "English"
-    }
+    },
+    "coreLabel": "A neural core releasing each team member's profile chip"
   },
   "booking": {
     "eyebrow": "Start your project",
@@ -219,7 +222,9 @@
       },
       "another": "Send another request",
       "talk": "Prefer to talk? Email {email}"
-    }
+    },
+    "terminalLabel": "A node terminal: your chosen service snaps into the pipeline as you complete each step",
+    "customCartridge": "Custom"
   },
   "copilot": {
     "name": "Afaq Copilot",

@@ -1,11 +1,12 @@
 import Image from "next/image";
 import { Globe } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { TeamMember } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { GitHubIcon, LinkedInIcon, XIcon } from "@/components/ui/icons";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { SectionShell } from "@/components/layout/section-shell";
+import { StageSlot } from "@/components/stage/stage-slot";
 import { BilingualBio } from "./bilingual-bio";
 import { CvPreviewDialog } from "./cv-preview-dialog";
 import { SectionUnavailable } from "./section-unavailable";
@@ -22,10 +23,21 @@ interface TeamSectionProps {
 /** "The Minds Behind the Magic": tilt cards with bilingual bios, skills, socials and CV preview/download. */
 export function TeamSection({ team, alternate = null }: TeamSectionProps) {
   const t = useTranslations("team");
+  const locale = useLocale() as "ar" | "en";
   const alternateById = new Map((alternate ?? []).map((member) => [member.id, member]));
 
   return (
-    <SectionShell id="team" eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")}>
+    <SectionShell
+      id="team"
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      subtitle={t("subtitle")}
+      visual={
+        team && team.length > 0 ? (
+          <StageSlot scene="team" locale={locale} data={team.map(({ id, name, role }) => ({ id, name, role }))} label={t("coreLabel")} className="h-72 lg:h-80" />
+        ) : undefined
+      }
+    >
       {team === null ? (
         <SectionUnavailable />
       ) : (
@@ -33,7 +45,7 @@ export function TeamSection({ team, alternate = null }: TeamSectionProps) {
           {team.map((member) => {
             const other = alternateById.get(member.id);
             return (
-              <li key={member.id}>
+              <li key={member.id} data-focus-member={member.id}>
                 <TiltCard className="flex flex-col gap-4">
                   <div className="flex items-center gap-4" data-depth>
                     {member.avatar_url ? (

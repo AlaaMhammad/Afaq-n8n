@@ -186,3 +186,13 @@ Stores are created with `create<State>()(devtools(...))` in development only; no
   `fallbackReason` drives the localized notice. `renderAttempt` keys each canvas mount, so a remount fades in only after its own first frame.
 - **`explodeProgress`** is the mean of the per-node springs, written by `WorkflowWorld` when it changes. DOM code should still read `mode`.
 - **Selection and hover** (`selectedNodeId`, `hoveredNodeId`) are shared by the 3D scene, the 2D diagram and the step list, so hovering any of them highlights the other two. Escape or a click on empty canvas clears the selection, and the camera glides back.
+
+## 8. As built (visual overhaul)
+
+- **`useSceneStore`:**
+  - `stage`: `"off" | "loading" | "live"`, set by `StageRoot` and the stage's first frame. `StageSlot` and the portfolio only mount views while it isn't `"off"`.
+  - `powered`: the hero switch is closed and the conduits are energised. Set on the first scroll past 40 px, or toggled by clicking the switch.
+- **`useUiStore`:**
+  - `focus`: `{ service, member }`, written by `StageFocusBridge` from `data-focus-*` attributes on hover/focus. The rack blade and the profile chip react to it.
+  - `bookingTrack`: `{ step, serviceSlug, submitted }`, mirrored by `BookingForm`. It drives the node terminal: the cartridge snaps in, sockets light up, a "delivered" terminal confirms the request.
+- 3D scenes read stores with `getState()` inside `useFrame`. Per-frame scratch objects live in refs, never in memoised values (React Compiler rule).

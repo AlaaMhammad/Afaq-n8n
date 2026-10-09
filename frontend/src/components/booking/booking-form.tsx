@@ -74,6 +74,11 @@ export function BookingForm({ services }: { services: Service[] }) {
   const estimate = useLiveEstimate({ service_slug: service_slug ?? "", complexity: Number(complexity) || 3, timeline: timeline ?? "1_3_months", budget_range });
   const estimateCard = <EstimateCard state={estimate} />;
 
+  // Mirror progress to the 3D node terminal (the chosen cartridge snaps in, sockets light up).
+  useEffect(() => {
+    useUiStore.getState().setBookingTrack({ step, serviceSlug: service_slug ?? "", submitted: result !== null });
+  }, [step, service_slug, result]);
+
   const goTo = useCallback((next: number) => {
     moved.current = true;
     setStep(next);

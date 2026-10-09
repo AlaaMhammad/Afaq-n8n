@@ -1,49 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
-import { useTheme } from "next-themes";
-import { useTranslations } from "next-intl";
-import { useMediaQuery } from "@/lib/hooks/use-media-query";
-import { useIdle, useSceneSupport } from "@/lib/hooks/use-scene-support";
-import { cn } from "@/lib/utils";
-import { selectWants3d, useSceneStore } from "@/stores/scene-store";
+import { useLocale, useTranslations } from "next-intl";
+import { StageSlot } from "@/components/stage/stage-slot";
+import { useSceneStore } from "@/stores/scene-store";
 
-const AutomationCore = dynamic(() => import("@/components/three/hero/automation-core"), { ssr: false });
+/** CSS poster: shown first, on phones, and wherever WebGL is unavailable. */
+function HeroPoster() {
+  return (
+    <div className="absolute inset-0">
+      <div className="absolute inset-0 rounded-full border border-pulse/20" />
+      <div className="absolute inset-10 rounded-full border border-dashed border-accent/30" />
+      <div className="absolute inset-24 rounded-full bg-accent/10 shadow-glow-accent" />
+      <div className="absolute inset-[38%] animate-pulse-ring rounded-full bg-accent shadow-glow-accent" />
+    </div>
+  );
+}
 
 /**
- * Hero centrepiece. The CSS orb is the server-rendered poster (and the phone/no-WebGL/2D-mode
- * version); on large screens the R3F automation core loads once the browser is idle — after LCP —
- * and cross-fades in on its first frame.
+ * Hero centrepiece: the n8n trigger switch, a vignette of the shared stage canvas. Scrolling or
+ * clicking it closes the circuit and energises the data conduits that run down the page.
  */
 export function HeroVisual() {
   const t = useTranslations("hero");
-  const large = useMediaQuery("(min-width: 1024px)");
-  const webgl = useSceneSupport();
-  const wants3d = useSceneStore(selectWants3d);
-  const idle = useIdle();
-  const { resolvedTheme } = useTheme();
-  const renderAttempt = useSceneStore((s) => s.renderAttempt);
-  const [readyAttempt, setReadyAttempt] = useState<number | null>(null);
-  const ready = readyAttempt === renderAttempt;
-
-  const show3d = large && idle && webgl === true && wants3d;
-  const live = show3d && ready;
+  const locale = useLocale() as "ar" | "en";
+  const powered = useSceneStore((s) => s.powered);
+  const live = useSceneStore((s) => s.stage === "live");
 
   return (
     <div className="relative mx-auto hidden aspect-square w-full max-w-md lg:block">
-      <div className={cn("absolute inset-0 transition-opacity duration-1000", live && "opacity-0")} aria-hidden>
-        <div className="absolute inset-0 rounded-full border border-pulse/20" />
-        <div className="absolute inset-10 rounded-full border border-dashed border-accent/30" />
-        <div className="absolute inset-24 rounded-full bg-accent/10 shadow-glow-accent" />
-        <div className="absolute inset-[38%] animate-pulse-ring rounded-full bg-accent shadow-glow-accent" />
-      </div>
-      {show3d && (
-        <div key={renderAttempt} className={cn("absolute -inset-10 transition-opacity duration-1000", ready ? "opacity-100" : "opacity-0")}>
-          <AutomationCore label={t("coreLabel")} theme={resolvedTheme} onReady={() => setReadyAttempt(renderAttempt)} />
-        </div>
+      <StageSlot scene="hero" locale={locale} poster={<HeroPoster />} label={t("coreLabel")} className="absolute -inset-10" />
+      {live && (
+        <p className="pointer-events-none absolute inset-x-0 -bottom-8 text-center text-xs text-muted" aria-live="polite">
+          {powered ? t("switchOn") : t("coreHint")}
+        </p>
       )}
-      {live && <p className="pointer-events-none absolute inset-x-0 -bottom-8 text-center text-xs text-muted">{t("coreHint")}</p>}
     </div>
   );
 }

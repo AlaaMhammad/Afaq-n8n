@@ -12,6 +12,8 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { AgentActionRunner } from "@/components/assistant/agent-action-runner";
 import { CopilotWidget } from "@/components/assistant/copilot-widget";
+import { StageFocusBridge } from "@/components/stage/stage-focus-bridge";
+import { StageRoot } from "@/components/stage/stage-root";
 import { SectionObserver } from "@/components/layout/section-observer";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -73,6 +75,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             <main id="main">{children}</main>
             <SiteFooter year={year} />
             <SectionObserver />
+            <StageRoot />
+            <StageFocusBridge />
             <AgentActionRunner />
             <CopilotWidget />
             <Toaster dir={dir} />

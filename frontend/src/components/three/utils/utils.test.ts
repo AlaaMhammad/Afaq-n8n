@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { QuadraticBezierCurve3, Vector3 } from "three";
 import type { Workflow } from "@/lib/api/types";
 import { fitCamera, focusPose, workflowBounds } from "./camera";
-import { PORT_OFFSET, packetScale, sampleCurve, shapeEdgeCurve } from "./edge";
 import { detectQualityTier, QUALITY_SETTINGS, settingsFor } from "./quality";
 import { damp, stepSpring } from "./spring";
 
@@ -129,28 +127,5 @@ describe("camera fitting", () => {
     const focus = focusPose([4.5, 0, 0], base, 5);
     expect(focus.target).toEqual([4.5, 0, 0]);
     expect(Math.hypot(...focus.position.map((p, i) => p - focus.target[i]))).toBeCloseTo(5, 5);
-  });
-});
-
-describe("edge curves", () => {
-  it("anchors on node surfaces and lifts the arc as the workflow explodes", () => {
-    const from = new Vector3(-3, 0, 0);
-    const to = new Vector3(3, 0, 0);
-    const assembled = shapeEdgeCurve(new QuadraticBezierCurve3(), from, to, 0);
-    expect(assembled.v0.x).toBeCloseTo(-3 + PORT_OFFSET);
-    expect(assembled.v2.x).toBeCloseTo(3 - PORT_OFFSET);
-    const lowLift = assembled.v1.y;
-
-    const exploded = shapeEdgeCurve(new QuadraticBezierCurve3(), from, to, 1);
-    expect(exploded.v1.y).toBeGreaterThan(lowLift);
-
-    const points = sampleCurve(exploded, 4, new Float32Array(15));
-    expect(points[0]).toBeCloseTo(exploded.v0.x);
-    expect(points[12]).toBeCloseTo(exploded.v2.x);
-  });
-
-  it("packets grow out of the source port and shrink into the target", () => {
-    expect(packetScale(0)).toBeLessThan(packetScale(0.5));
-    expect(packetScale(1)).toBeCloseTo(packetScale(0));
   });
 });
