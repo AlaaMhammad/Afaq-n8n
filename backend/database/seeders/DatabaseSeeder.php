@@ -5,7 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * Day-one demo content. Every seeder is idempotent, so `db:seed` can be re-run safely.
+ * Day-one content. Every seeder is idempotent, so `db:seed` can be re-run safely.
+ * The demo leads (and their chat transcripts) are local-only: production starts with an empty inbox.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -17,7 +18,7 @@ class DatabaseSeeder extends Seeder
             ProjectSeeder::class,
             TeamMemberSeeder::class,
             KnowledgeDocumentSeeder::class,
-            ServiceRequestSeeder::class,
+            ...(app()->isProduction() ? [] : [ServiceRequestSeeder::class]),
         ]);
     }
 }

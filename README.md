@@ -48,6 +48,17 @@ Set `ADMIN_SEED_PASSWORD` (12+ characters) in `backend/.env` before seeding to c
 
 Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agent.md).
 
+## Production (VPS)
+
+`afaqn8n.me` (Next.js) and `dashboard.afaqn8n.me` (API + Filament admin) run from `docker-compose.prod.yml` behind the host nginx:
+
+```bash
+./deploy.sh --seed   # first deploy
+./deploy.sh          # later deploys: pull, DB backup, migrate, rebuild, health checks
+```
+
+Server setup, certbot and the nginx sites: [docs/06_testing_devops/deployment_docker.md §9](docs/06_testing_devops/deployment_docker.md#9-vps-deployment-runbook-deploysh).
+
 ## Execution phases
 
 1. ✅ Documentation, scaffolding, Docker
@@ -56,6 +67,6 @@ Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agen
 4. ✅ Public API, frontend foundations: theme, RTL/LTR, Zustand bridge, UI kit
 5. ✅ 3D canvas (R3F): procedural n8n nodes, laser edges with data packets, exploded view, quality tiers and 2D fallback
 6. ✅ Copilot chat widget, multi-step booking & estimator, hero / services bento / team showcase
-7. Testing, hardening, deployment
+7. Testing, hardening, deployment (🚧 VPS deployment ready: `deploy.sh`)
 
 The full plan is in [`afaq_automation_agency_master_plan.md`](afaq_automation_agency_master_plan.md).

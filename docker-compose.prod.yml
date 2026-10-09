@@ -1,0 +1,121 @@
+# Afaq Automation Agency — production stack (single VPS)
+#
+#   Internet ─▶ host nginx (TLS, deploy/nginx/*.conf)
+#                 ├─ afaqn8n.me            ─▶ 127.0.0.1:${FRONTEND_PORT} ─▶ frontend (Next.js standalone)
+#                 └─ dashboard.afaqn8n.me  ─▶ 127.0.0.1:${WEB_PORT}      ─▶ web (nginx) ─▶ backend (PHP-FPM)
+#
+# Nothing here listens on a public interface: Postgres and Redis stay on the compose network,
+# and the two HTTP ports are bound to loopback for the host nginx only.
+# Usage: ./deploy.sh (see docs/06_testing_devops/deployment_docker.md §9)
+
+name: ${COMPOSE_PROJECT_NAME:-afaq}
+
+x-backend: &backend
+  image: afaq/backend:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  volumes:
+    - ./backend/.env:/var/www/html/.env:ro
+    - backend_storage:/var/www/html/storage/app
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-afaq}
+      POSTGRES_USER: ${POSTGRES_USER:-afaq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.prod.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+
+  backend:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: prod
+
+  queue:
+    <<: *backend
+    pull_policy: never # same image as backend, built by `build backend`
+    command: ["php", "artisan", "queue:work", "redis", "--tries=3", "--timeout=600", "--sleep=2", "--max-time=3600"]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'artisan queue:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+    stop_grace_period: 60s
+
+  scheduler:
+    <<: *backend
+    pull_policy: never
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'artisan schedule:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+
+  web:
+    image: afaq/web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    volumes:
+      - backend_storage:/var/www/html/storage/app:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *logging
+
+  frontend:
+    # Built by deploy.sh with `docker build --network host` (the prerender reads the live API)
+    image: afaq/frontend:${IMAGE_TAG:-latest}
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      # Server Components refresh cached content over the compose network
+      API_INTERNAL_URL: http://web/api/v1
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      web:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  pgdata:
+  redisdata:
+  backend_storage:

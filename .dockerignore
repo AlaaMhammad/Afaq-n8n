@@ -9,3 +9,11 @@ backend/storage/framework/sessions/*
 backend/storage/framework/views/*
 backend/bootstrap/cache/*.php
 docs
+backend/public/storage
+backend/public/css/filament
+backend/public/js/filament
+backend/public/fonts/filament
+backend/storage/app/public/*
+backend/storage/app/private/*
+backend/tests
+frontend

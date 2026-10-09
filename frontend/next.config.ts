@@ -7,6 +7,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const apiOrigin = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1");
 
 const nextConfig: NextConfig = {
+  // Self-contained server for the production Docker image (frontend/Dockerfile)
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   // Docker Desktop bind mounts (Windows/macOS) drop file events. The compose service opts into

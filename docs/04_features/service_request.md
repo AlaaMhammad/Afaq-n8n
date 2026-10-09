@@ -85,7 +85,7 @@ public function store(StoreServiceRequestRequest $request, CreateServiceRequest 
   "timeline": "1_3_months",
   "requirements": "…",
   "estimate": { "min": 2500, "max": 4000, "currency": "USD" },
-  "admin_url": "https://api.afaqn8n.me/admin/service-requests/57"
+  "admin_url": "https://dashboard.afaqn8n.me/admin/service-requests/57"
 }
 ```
 

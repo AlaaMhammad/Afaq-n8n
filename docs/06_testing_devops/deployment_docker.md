@@ -119,16 +119,16 @@ Next.js `output: 'standalone'`:
 ## 5. Production topology
 
 ```
-Cloudflare (DNS, TLS, WAF, cache)
-├── afaqn8n.me         → frontend (Next.js standalone)   [Cloudflare proxied]
-└── api.afaqn8n.me     → nginx → backend (FPM)            [Cloudflare proxied]
-                          ├── queue worker
-                          ├── scheduler
-                          ├── postgres (managed or container w/ backups)
-                          └── redis
+VPS srv800051 — host nginx (TLS: Let's Encrypt), optional Cloudflare in front
+├── afaqn8n.me (+ www → apex)  → 127.0.0.1:3000 → frontend  (Next.js standalone)
+└── dashboard.afaqn8n.me       → 127.0.0.1:8080 → web (nginx, public/) → backend (PHP-FPM :9000)
+                                                   ├── queue      (queue:work redis)
+                                                   ├── scheduler  (schedule:work)
+                                                   ├── postgres   (pgvector, volume pgdata)
+                                                   └── redis      (AOF, volume redisdata)
 ```
 
-Deploy targets: a single VPS with Docker Compose (`docker-compose.prod.yml`) for v1; images built in CI and pushed to GHCR; zero-downtime via `docker compose up -d --no-deps --build backend` + `php artisan migrate --force` in a release step.
+v1 builds images on the server (`deploy.sh`, §9). Next step: build in CI, push to GHCR, and have `deploy.sh` pull tagged images instead of building.
 
 Backups: nightly `pg_dump` (custom format) to R2, 14-day retention; `storage/app/public` synced to R2 (or use R2 as the media disk directly).
 
@@ -138,11 +138,11 @@ Backups: nightly `pg_dump` (custom format) to R2, 14-day retention; `storage/app
 |------|-------|---------|
 | Cache static Next assets | `afaqn8n.me/_next/static/*` | Cache Everything, Edge TTL 1 year (immutable hashed files) |
 | Cache fonts/3D assets | `afaqn8n.me/fonts/*`, `afaqn8n.me/models/*`, `*.woff2`, `*.glb`, `*.ktx2` | Cache Everything, Edge TTL 30 days, Browser TTL 7 days |
-| Cache media | `api.afaqn8n.me/storage/*` | Cache Everything, Edge TTL 7 days |
-| Bypass API | `api.afaqn8n.me/api/*` | Bypass cache (origin `Cache-Control` honored for public GETs if enabled later) |
-| Bypass admin | `api.afaqn8n.me/admin*`, `/livewire/*` | Bypass cache, WAF managed challenge for non-allow-listed countries (optional) |
-| SSE | `api.afaqn8n.me/api/v1/ai/chat` | Bypass cache; no Rocket Loader; no response buffering (Cloudflare streams `text/event-stream` by default) |
-| Rate limit | `api.afaqn8n.me/api/v1/ai/chat` | 20 req/min/IP → block 1 min (outer layer to Laravel's 10/min) |
+| Cache media | `dashboard.afaqn8n.me/storage/*` | Cache Everything, Edge TTL 7 days |
+| Bypass API | `dashboard.afaqn8n.me/api/*` | Bypass cache (origin `Cache-Control` honored for public GETs if enabled later) |
+| Bypass admin | `dashboard.afaqn8n.me/admin*`, `/livewire/*` | Bypass cache, WAF managed challenge for non-allow-listed countries (optional) |
+| SSE | `dashboard.afaqn8n.me/api/v1/ai/chat` | Bypass cache; no Rocket Loader; no response buffering (Cloudflare streams `text/event-stream` by default) |
+| Rate limit | `dashboard.afaqn8n.me/api/v1/ai/chat` | 20 req/min/IP → block 1 min (outer layer to Laravel's 10/min) |
 | Compression | all | Brotli on |
 
 WebGL asset optimization: procedural geometry by default; any future GLB models are Draco/Meshopt compressed with KTX2 textures (`gltf-transform optimize`), lazy-loaded via `useGLTF.preload` only when the portfolio enters the viewport.
@@ -152,7 +152,7 @@ WebGL asset optimization: procedural geometry by default; any future GLB models 
 | Variable | Where | Dev | Prod |
 |----------|-------|-----|------|
 | `APP_ENV` / `APP_DEBUG` | backend | `local` / `true` | `production` / `false` |
-| `APP_URL` | backend | `http://localhost:8000` | `https://api.afaqn8n.me` |
+| `APP_URL` | backend | `http://localhost:8000` | `https://dashboard.afaqn8n.me` |
 | `FRONTEND_URL` | backend | `http://localhost:3000` | `https://afaqn8n.me` |
 | `CORS_ALLOWED_ORIGINS` | backend | `http://localhost:3000` | `https://afaqn8n.me,https://www.afaqn8n.me` |
 | `DB_*` | backend + compose | `postgres` / `afaq` / `afaq` / `secret` | secrets |
@@ -165,7 +165,7 @@ WebGL asset optimization: procedural geometry by default; any future GLB models 
 | `N8N_WEBHOOK_URL` / `N8N_WEBHOOK_SECRET` | backend | test webhook / random | prod webhook / secret |
 | `ADMIN_SEED_PASSWORD` | backend | dev value | unset after first deploy |
 | `FILESYSTEM_DISK` | backend | `public` | `r2` |
-| `NEXT_PUBLIC_API_URL` | frontend | `http://localhost:8000/api/v1` | `https://api.afaqn8n.me/api/v1` |
+| `NEXT_PUBLIC_API_URL` | frontend | `http://localhost:8000/api/v1` | `https://dashboard.afaqn8n.me/api/v1` |
 | `NEXT_PUBLIC_SITE_URL` | frontend | `http://localhost:3000` | `https://afaqn8n.me` |
 
 ## 8. Release checklist
@@ -178,3 +178,105 @@ WebGL asset optimization: procedural geometry by default; any future GLB models 
 6. `php artisan rag:index-knowledge` if knowledge or embedding model changed.
 7. `php artisan up`; smoke test `/api/v1/health`, home page in ar/en, one AI chat turn.
 8. Purge Cloudflare cache for HTML (not `_next/static`).
+
+## 9. VPS deployment runbook (`deploy.sh`)
+
+Server: `misleem@srv800051`, checkout at `/var/www/afaq/afaqn8n` (Ubuntu, Docker Engine + compose plugin, host nginx).
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.prod.yml` | Prod stack; only `web` (`127.0.0.1:${WEB_PORT:-8080}`) and `frontend` (`127.0.0.1:${FRONTEND_PORT:-3000}`) publish ports |
+| `docker/backend/Dockerfile` targets `prod` + `web` | FPM image (`entrypoint-prod.sh` builds Laravel/Filament caches from the mounted `.env`) and nginx image with `public/` (Filament assets) baked in |
+| `docker/nginx/prod.conf` | nginx inside `web`: FastCGI to `backend:9000`, SSE location unbuffered, `/storage` from the shared volume |
+| `frontend/Dockerfile` | Next.js `output: "standalone"` image |
+| `deploy/nginx/*.conf`, `deploy/nginx/snippets/*` | Host nginx sites (TLS, redirects, SSE) |
+| `.env.production.example`, `backend/.env.production.example` | Templates for the server's `.env` and `backend/.env` |
+
+### 9.1 One-time server setup
+
+```bash
+# Docker Engine + compose plugin (skip if installed)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker misleem            # log out and back in afterwards
+
+sudo apt-get install -y nginx certbot git
+sudo mkdir -p /var/www/afaq /var/www/letsencrypt
+sudo chown misleem:misleem /var/www/afaq
+
+cd /var/www/afaq
+git clone https://github.com/<owner>/<repo>.git afaqn8n    # or the SSH URL with a deploy key
+cd afaqn8n
+cp .env.production.example .env                      # set POSTGRES_PASSWORD
+cp backend/.env.production.example backend/.env      # DB_PASSWORD (same), GEMINI_API_KEY, N8N_*, MAIL_*, ADMIN_SEED_PASSWORD
+chmod 600 .env backend/.env
+chmod +x deploy.sh
+
+# APP_KEY: build once, print a key, paste it into backend/.env
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml run --rm --no-deps -e AFAQ_OPTIMIZE=0 backend php artisan key:generate --show
+```
+
+DNS: `A`/`AAAA` records for `afaqn8n.me`, `www.afaqn8n.me` and `dashboard.afaqn8n.me` → the VPS. If Cloudflare proxies them, set SSL mode **Full (strict)**. Issue the certificates first with the records **DNS only** (grey cloud), or keep the HTTP-01 webroot reachable.
+
+### 9.2 TLS certificates (certbot, webroot)
+
+The site configs reference certificate files, so nginx refuses to load them before the first issue. Bootstrap with the port-80-only config, then switch:
+
+```bash
+sudo cp deploy/nginx/acme-bootstrap.conf /etc/nginx/sites-available/afaq-acme.conf
+sudo ln -sf /etc/nginx/sites-available/afaq-acme.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo certbot certonly --webroot -w /var/www/letsencrypt \
+  -d afaqn8n.me -d www.afaqn8n.me \
+  --email info@afaqn8n.me --agree-tos --no-eff-email
+sudo certbot certonly --webroot -w /var/www/letsencrypt \
+  -d dashboard.afaqn8n.me \
+  --email info@afaqn8n.me --agree-tos --no-eff-email
+
+sudo rm /etc/nginx/sites-enabled/afaq-acme.conf
+```
+
+Renewal: the certbot package installs a systemd timer. Reload nginx after each renewal and dry-run once:
+
+```bash
+echo -e '#!/bin/sh\nsystemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+sudo certbot renew --dry-run
+```
+
+### 9.3 Host nginx sites
+
+```bash
+sudo cp deploy/nginx/snippets/afaq-ssl.conf deploy/nginx/snippets/afaq-proxy.conf /etc/nginx/snippets/
+sudo cp deploy/nginx/afaqn8n.me.conf deploy/nginx/dashboard.afaqn8n.me.conf /etc/nginx/sites-available/
+sudo ln -sf /etc/nginx/sites-available/afaqn8n.me.conf /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/dashboard.afaqn8n.me.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+If `WEB_PORT`/`FRONTEND_PORT` in `.env` aren't 8080/3000, change the `upstream` blocks to match. The SSE location (`/api/v1/ai/chat`) turns off `proxy_buffering`, `proxy_request_buffering`, `proxy_cache` and gzip and raises the read timeout to 120 s; the stack's nginx does the same for FastCGI, and Laravel also sends `X-Accel-Buffering: no`. Both configs pass `nginx -t` on nginx 1.18 and 1.24 (Ubuntu 22.04 and 24.04).
+
+### 9.4 Deploying
+
+```bash
+./deploy.sh --seed     # first deploy: migrate + seed content/admin + index the knowledge base
+./deploy.sh            # every later deploy
+./deploy.sh --reindex  # also re-embed changed knowledge chunks
+```
+
+Each run takes a lock, checks the env files, fast-forwards `main`, builds `backend`/`web`, starts postgres+redis, writes a `pg_dump -Fc` to `$BACKUP_DIR` (keeps the newest 14), runs `migrate --force`, restarts backend/queue/scheduler/web and waits for their health checks, checks `/up`, then builds the frontend against the live API (`--network host`, so `/ar` and `/en` prerender with content), restarts it, checks `/ar` and `/en`, and prunes old images (the 3 newest release tags are kept).
+
+The production seeder skips the 25 demo leads. After the first seed, remove `ADMIN_SEED_PASSWORD` from `backend/.env`.
+
+**Rollback:** `git checkout <sha> && ./deploy.sh --no-pull`, then restore a dump if a migration changed data:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres pg_restore -U afaq -d afaq --clean --if-exists < /var/www/afaq/backups/<file>.dump
+```
+
+Then `git checkout main` so the next `./deploy.sh` pulls again.
+
+### 9.5 Verified locally
+
+The prod stack was run end to end on Docker Desktop (isolated project, `LLM_DRIVER=fake`): migrate + seed, all 6 services healthy, `/up`, the API, `/admin/login`, Filament CSS and Livewire JS, per-IP rate limits behind the proxy, `/ar` (RTL) + `/en` prerendered with the 4 projects. The host nginx configs then ran in an nginx 1.24 container with self-signed certificates: HTTP→HTTPS, www→apex, HSTS, and the SSE stream arrived event by event, unbuffered and uncompressed.

@@ -19,3 +19,4 @@ desktop.ini
 
 # Local Claude Code / editor launch configs
 .claude/
+!.env.production.example

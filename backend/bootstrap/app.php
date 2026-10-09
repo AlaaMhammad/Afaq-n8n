@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [AssignRequestId::class, SetApiLocale::class]);
+
+        // Production: host nginx (TLS) → web container → FPM. Trust only private-network hops so
+        // request()->ip() — rate limits, chat ip_hash — is the visitor, not the proxy.
+        $middleware->trustProxies(at: ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Every /api/* error is RFC 7807 problem+json (docs/02_api_specs/error_handling.md)

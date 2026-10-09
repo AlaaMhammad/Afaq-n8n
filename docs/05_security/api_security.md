@@ -107,10 +107,10 @@ nginx denies execution under `/storage` (`location ~* ^/storage/.*\.php$ { deny 
 default-src 'self';
 script-src 'self' 'unsafe-inline';            # tighten with nonces once stable
 style-src 'self' 'unsafe-inline';
-img-src 'self' data: blob: https://api.afaqn8n.me;
+img-src 'self' data: blob: https://dashboard.afaqn8n.me;
 font-src 'self';
-connect-src 'self' https://api.afaqn8n.me;
-frame-src https://api.afaqn8n.me;             # CV preview iframe
+connect-src 'self' https://dashboard.afaqn8n.me;
+frame-src https://dashboard.afaqn8n.me;             # CV preview iframe
 worker-src 'self' blob:;                       # troika text workers
 ```
 
