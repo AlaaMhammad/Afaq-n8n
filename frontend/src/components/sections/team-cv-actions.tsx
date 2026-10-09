@@ -13,7 +13,7 @@ export function TeamCvActions({ member }: { member: TeamMember }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="secondary" onClick={() => openCvPreview({ memberId: member.id, name: member.name, url: member.cv!.preview_url })}>
+      <Button size="sm" variant="secondary" onClick={() => openCvPreview({ memberId: member.id, name: member.name, url: member.cv!.preview_url, downloadUrl: member.cv!.download_url })}>
         <Eye /> {t("previewCv")}
       </Button>
       <Button asChild size="sm" variant="ghost">

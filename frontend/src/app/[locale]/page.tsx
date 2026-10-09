@@ -16,19 +16,22 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [services, projects, team] = await Promise.all([
+  const otherLocale = locale === "ar" ? "en" : "ar";
+  const [services, projects, team, teamInOtherLocale] = await Promise.all([
     safely(() => getServices(locale)),
     safely(() => getProjects(locale)),
     safely(() => getTeam(locale)),
+    // Lets each bio switch to the other language without a client request.
+    safely(() => getTeam(otherLocale)),
   ]);
 
   return (
     <>
-      <HeroSection />
+      <HeroSection projects={projects} />
       <ServicesSection services={services} />
       <PortfolioSection projects={projects} />
-      <TeamSection team={team} />
-      <BookingSection />
+      <TeamSection team={team} alternate={teamInOtherLocale} />
+      <BookingSection services={services} />
     </>
   );
 }

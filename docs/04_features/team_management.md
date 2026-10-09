@@ -82,3 +82,9 @@ See [endpoints.md §3.3](../02_api_specs/endpoints.md). Only `is_active = true` 
 - Pest: `GET /team/{id}/cv` inline vs `?download=1` disposition; 404 when missing; redirect when absolute URL.
 - Pest: Filament upload rejects non-PDF CV (Livewire test).
 - Playwright: Preview modal opens with iframe pointing at the CV URL; Esc closes and returns focus.
+
+## As built (Phase 6)
+
+- **Team cards** tilt toward the pointer with a glare (`TiltCard`, CSS variables, no React render per move). They are flat on touch devices and with reduced motion.
+- **Bilingual bios:** the page loads the team in both locales (`getTeam(otherLocale)`, cached), so each card can switch its role and bio to the other language with the right `lang`/`dir`.
+- **CV dialog:** the PDF is shown inline on desktop (fine pointer, ≥ 768 px). On phones the dialog offers **Open** / **Download** instead of an empty frame.

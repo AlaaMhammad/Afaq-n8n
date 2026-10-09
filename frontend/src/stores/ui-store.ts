@@ -15,15 +15,22 @@ export interface BookingDraft {
   requirements?: string;
 }
 
+export interface CvPreview {
+  memberId: number;
+  name: string;
+  url: string;
+  downloadUrl: string;
+}
+
 export interface UiState {
   activeSection: SectionId;
   mobileNavOpen: boolean;
-  cvPreview: { memberId: number; name: string; url: string } | null;
+  cvPreview: CvPreview | null;
   bookingPrefill: BookingDraft | null;
 
   setActiveSection: (section: SectionId) => void;
   setMobileNavOpen: (open: boolean) => void;
-  openCvPreview: (preview: { memberId: number; name: string; url: string }) => void;
+  openCvPreview: (preview: CvPreview) => void;
   closeCvPreview: () => void;
   prefillBooking: (draft: BookingDraft | null) => void;
 }

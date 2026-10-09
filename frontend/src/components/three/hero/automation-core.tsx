@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useCursor } from "@react-three/drei";
 import { AdditiveBlending, Color, NormalBlending, Object3D, type Group, type InstancedMesh, type Mesh } from "three";
 import { useReducedMotion } from "@/lib/hooks/use-media-query";
 import { scenePalette, type ScenePalette } from "@/lib/theme/palette";
@@ -41,10 +42,16 @@ const ORBITS: {
 ];
 const PACKETS_PER_ORBIT = 10;
 
+/** Click "energy": 1 right after a click, decaying to 0 — speeds the orbits up and swells the core. */
+interface Energy {
+  value: number;
+}
+
 /**
  * Hero centrepiece: a faceted automation "core" wrapped by orbits of nodes and data packets,
  * leaning toward the pointer. Transparent canvas over the page; glow comes from additive
  * halo sprites (no post-processing, so it stays cheap and works on any background).
+ * Clicking the core fires a "data burst": packets race around the orbits and the core pulses.
  */
 export default function AutomationCore({ label, theme, onReady }: { label: string; theme: string | undefined; onReady?: () => void }) {
   const palette = scenePalette(theme);
@@ -68,6 +75,15 @@ function CoreRig({ palette }: { palette: ScenePalette }) {
   const reducedMotion = useReducedMotion();
   const glowAccent = useMemo(() => new Color(palette.accent).multiplyScalar(palette.glow), [palette]);
   const glowTexture = useMemo(() => getGlowTexture(), []);
+  // Written on click, read every frame — never during render.
+  const energy = useRef<Energy>({ value: 0 });
+  const [hovered, setHovered] = useState(false);
+  useCursor(hovered);
+
+  const burst = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    energy.current.value = 1;
+  };
 
   // Window-level pointer so the core leans toward the cursor anywhere in the hero.
   useEffect(() => {
@@ -82,21 +98,35 @@ function CoreRig({ palette }: { palette: ScenePalette }) {
   }, [reducedMotion]);
 
   useFrame((_, dt) => {
+    energy.current.value *= Math.exp(-dt * 1.4);
     if (reducedMotion) return;
     if (rig.current) {
       rig.current.rotation.y += (pointer.current.x * 0.3 - rig.current.rotation.y) * Math.min(1, dt * 2.5);
       rig.current.rotation.x += (pointer.current.y * 0.2 - rig.current.rotation.x) * Math.min(1, dt * 2.5);
     }
+    const boost = 1 + energy.current.value * 6;
     if (core.current) {
-      core.current.rotation.y += dt * 0.35;
-      core.current.rotation.x += dt * 0.12;
+      core.current.rotation.y += dt * 0.35 * boost;
+      core.current.rotation.x += dt * 0.12 * boost;
+      core.current.scale.setScalar(1 + energy.current.value * 0.18);
     }
-    if (cage.current) cage.current.rotation.y -= dt * 0.18;
+    if (cage.current) {
+      cage.current.rotation.y -= dt * 0.18 * boost;
+      cage.current.scale.setScalar(1 + energy.current.value * 0.35);
+    }
   });
 
   return (
     <group ref={rig}>
-      <mesh ref={core}>
+      <mesh
+        ref={core}
+        onClick={burst}
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerOut={() => setHovered(false)}
+      >
         <icosahedronGeometry args={[1.05, 0]} />
         <meshStandardMaterial color={palette.body} metalness={0.6} roughness={0.3} emissive={palette.accent} emissiveIntensity={0.18} flatShading />
       </mesh>
@@ -119,7 +149,7 @@ function CoreRig({ palette }: { palette: ScenePalette }) {
         />
       </sprite>
       {ORBITS.map((orbit, i) => (
-        <Orbit key={i} {...orbit} palette={palette} reducedMotion={reducedMotion} />
+        <Orbit key={i} {...orbit} palette={palette} reducedMotion={reducedMotion} energy={energy} />
       ))}
     </group>
   );
@@ -133,9 +163,10 @@ interface OrbitProps {
   color: "pulse" | "accent";
   palette: ScenePalette;
   reducedMotion: boolean;
+  energy: React.RefObject<Energy>;
 }
 
-function Orbit({ radius, tilt, speed, nodes, color, palette, reducedMotion }: OrbitProps) {
+function Orbit({ radius, tilt, speed, nodes, color, palette, reducedMotion, energy }: OrbitProps) {
   const cubes = useRef<InstancedMesh>(null);
   const packets = useRef<InstancedMesh>(null);
   const dummy = useRef(new Object3D());
@@ -143,9 +174,12 @@ function Orbit({ radius, tilt, speed, nodes, color, palette, reducedMotion }: Or
   const packetCount = lowTier ? PACKETS_PER_ORBIT / 2 : PACKETS_PER_ORBIT;
   const hex = palette[color];
   const glow = useMemo(() => new Color(hex).multiplyScalar(palette.glow), [hex, palette.glow]);
+  /** Own clock so a burst can speed the orbit up without a jump when it ends. */
+  const phase = useRef(0);
 
-  useFrame(({ clock }) => {
-    const time = reducedMotion ? 0 : clock.elapsedTime;
+  useFrame((_, dt) => {
+    if (!reducedMotion) phase.current += Math.min(dt, 0.1) * (1 + energy.current.value * 5);
+    const time = phase.current;
     const d = dummy.current;
 
     if (cubes.current) {

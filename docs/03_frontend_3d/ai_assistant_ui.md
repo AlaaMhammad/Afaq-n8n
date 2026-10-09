@@ -139,3 +139,26 @@ src/components/assistant/
 ├── use-speech-input.ts
 └── agent-action-runner.tsx
 ```
+
+## 9. As built (Phase 6)
+
+```
+src/components/assistant/
+├── copilot-widget.tsx     # launcher (FAB, unread badge, Ctrl/⌘+K) — in the initial bundle
+├── copilot-panel.tsx      # lazy chunk: non-modal dialog (full-screen < 640 px), header, new chat, close
+├── message-list.tsx       # role="log", greeting, quick prompts, stick-to-bottom + "new messages" pill
+├── message-bubble.tsx     # markdown answer + caret, tool progress, action chips, sources, error + Retry
+├── markdown.tsx           # react-markdown + remark-gfm; #section links scroll in-page, external links new tab
+├── composer.tsx           # auto-growing textarea, Enter/Shift+Enter, ↑ recall, Stop, voice, 1500+ counter
+├── use-speech-input.ts    # Web Speech API (ar-SA / en-US), hidden when unsupported
+├── problem-message.ts     # problem code → localized message; PROMPT_REJECTED is not retryable
+└── agent-action-runner.tsx
+```
+
+- **Streaming:** tokens are buffered and applied every 32 ms (`TOKEN_FLUSH_MS`), not once per SSE frame. A `reset` event replaces the partial text.
+- **Tools and actions:** `tool_call` / `tool_result` become `message.tools` and are shown as "Submitting your request…" lines while running. Actions render as chips with **Go again**, **Toggle view** (flips the project if it is on screen) or **Copy reference**. Each chip re-enqueues a fresh action through the normal runner.
+- **Errors and retry:** errors are localized per problem code (`RATE_LIMITED` shows `retry_after`). `retry()` removes the failed pair and re-sends the same question; Stop keeps the partial answer.
+- **Session:** `restoreFromServer()` rebuilds the transcript from `GET /ai/sessions/{id}/messages` when only the session id survived. A 404 forgets the session.
+- **Shortcuts:** `ask(text)` opens the panel and sends. The hero's "Try asking" chips and the Services "custom" tile use it.
+- **Not built (yet):** the structured "Confirm / Edit" booking card from §4 — the model's text summary and confirmation turn still gate `submit_service_inquiry` server-side.
+- **Verified live:** "Show me the lead enrichment project exploded" streamed a markdown answer from Gemini and drove the 3D portfolio (project switched, exploded).

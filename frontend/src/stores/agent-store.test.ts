@@ -88,3 +88,74 @@ describe("agent store", () => {
     expect(stored.messages.at(-1).content).toBe("m39");
   });
 });
+
+describe("agent store — Copilot widget behaviour", () => {
+  it("tracks server tool activity on the answer", async () => {
+    script.run = (h) => {
+      h.onToolCall?.({ id: "t1", name: "submit_service_inquiry", args: {} });
+      h.onToolResult?.({ id: "t1", ok: true, summary: "AFQ-7K2M9P" });
+      h.onToolCall?.({ id: "t2", name: "navigate_to", args: {} }); // never resolved
+    };
+    await useAgentStore.getState().send("book it", "en");
+
+    expect(useAgentStore.getState().messages.at(-1)!.tools).toEqual([
+      { id: "t1", name: "submit_service_inquiry", status: "ok", summary: "AFQ-7K2M9P" },
+      { id: "t2", name: "navigate_to", status: "failed" },
+    ]);
+  });
+
+  it("retries a failed answer by re-sending the same question once", async () => {
+    script.run = (h) => h.onError?.({ type: "x", title: "Upstream", status: 502, code: "AI_PROVIDER_ERROR" });
+    await useAgentStore.getState().send("what do you offer?", "en");
+    expect(useAgentStore.getState().status).toBe("error");
+
+    script.run = (h) => {
+      h.onToken?.("We build n8n automations.");
+      h.onDone?.({ message_id: 2, usage: { input: 1, output: 1 } });
+    };
+    await useAgentStore.getState().retry("en");
+
+    const state = useAgentStore.getState();
+    expect(streamChat).toHaveBeenCalledTimes(2);
+    expect(state.status).toBe("idle");
+    expect(state.messages.map((m) => [m.role, m.content, m.status])).toEqual([
+      ["user", "what do you offer?", "complete"],
+      ["assistant", "We build n8n automations.", "complete"],
+    ]);
+  });
+
+  it("counts unread answers only while the panel is closed", async () => {
+    script.run = (h) => h.onDone?.({ message_id: 1, usage: { input: 1, output: 1 } });
+    await useAgentStore.getState().send("one", "en");
+    expect(useAgentStore.getState().unread).toBe(1);
+
+    useAgentStore.getState().open();
+    expect(useAgentStore.getState().unread).toBe(0);
+    await useAgentStore.getState().send("two", "en");
+    expect(useAgentStore.getState().unread).toBe(0);
+  });
+
+  it("ask() opens the panel and sends", async () => {
+    await useAgentStore.getState().ask("Show me the invoice project", "en");
+    expect(useAgentStore.getState().isOpen).toBe(true);
+    expect(streamChat).toHaveBeenCalledOnce();
+  });
+
+  it("restores the transcript from the API, or forgets an expired session", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ id: 1, role: "user", content: "hi", created_at: "2026-10-08T10:00:00Z" }, { id: 2, role: "assistant", content: "Hello!", created_at: "2026-10-08T10:00:01Z" }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    useAgentStore.setState({ sessionId: "11111111-1111-4111-8111-111111111111", messages: [] });
+    await useAgentStore.getState().restoreFromServer();
+    expect(fetchMock.mock.calls[0][0].toString()).toContain("/ai/sessions/11111111-1111-4111-8111-111111111111/messages");
+    expect(useAgentStore.getState().messages.map((m) => m.content)).toEqual(["hi", "Hello!"]);
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: "NOT_FOUND", status: 404, title: "Not found" }), { status: 404 }));
+    useAgentStore.setState({ sessionId: "22222222-2222-4222-8222-222222222222", messages: [] });
+    await useAgentStore.getState().restoreFromServer();
+    expect(useAgentStore.getState().sessionId).toBeNull();
+  });
+});

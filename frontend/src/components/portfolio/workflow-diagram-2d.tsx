@@ -13,9 +13,13 @@ const KIND_STYLES: Record<NodeKind, string> = {
   storage: "rounded-md border-muted bg-surface-2",
 };
 
-/** Scene units → pixels: fit ~14.5 units (incl. exploded offsets) across, capped for large stages. */
+/** Scene units → pixels, capped for large stages. */
 const MAX_UNIT = 46;
-const UNITS_ACROSS = 14.5;
+/** Half the node button width plus a small gutter, so outer labels never clip. */
+const NODE_HALF_PX = 54;
+
+/** Furthest |x| any node reaches, assembled or exploded (scene units). */
+const reachX = (workflow: Workflow) => Math.max(1, ...workflow.nodes.flatMap((n) => [Math.abs(n.position[0]), Math.abs(n.position[0] + n.exploded[0])]));
 
 interface WorkflowDiagram2DProps {
   workflow: Workflow;
@@ -40,10 +44,11 @@ export function WorkflowDiagram2D({ workflow, exploded, concealed = false }: Wor
   useEffect(() => {
     const element = stage.current;
     if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setUnit(Math.min(MAX_UNIT, entry.contentRect.width / UNITS_ACROSS)));
+    const reach = reachX(workflow);
+    const observer = new ResizeObserver(([entry]) => setUnit(Math.max(8, Math.min(MAX_UNIT, (entry.contentRect.width / 2 - NODE_HALF_PX) / reach))));
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [workflow]);
 
   const progress = exploded ? 1 : 0;
   const at = (node: Workflow["nodes"][number]) => ({

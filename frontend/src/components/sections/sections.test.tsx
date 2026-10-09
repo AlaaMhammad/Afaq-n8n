@@ -69,14 +69,20 @@ beforeEach(() => {
 });
 
 describe("ServicesSection", () => {
-  it("renders services with three feature badges and an isolated LTR price", () => {
-    withIntl(<ServicesSection services={[service]} />, "ar");
+  it("renders a bento grid: the featured tile lists every feature, others three, plus a Copilot tile", () => {
+    const second = { ...service, id: 2, slug: "voice", title: "Voice Agents" };
+    withIntl(<ServicesSection services={[service, second]} />, "ar");
 
-    const card = screen.getByText("CRM Sync").closest("li")!;
-    expect(within(card).getAllByText(/Real-time|De-duplication|Field mapping|Retries/)).toHaveLength(3);
-    const price = card.querySelector("bdi")!;
+    const featured = screen.getByText("CRM Sync").closest("li")!;
+    expect(featured.className).toContain("lg:col-span-2");
+    expect(within(featured).getAllByText(/Real-time|De-duplication|Field mapping|Retries/)).toHaveLength(4);
+    const price = featured.querySelector("bdi")!;
     expect(price).toHaveAttribute("dir", "ltr");
     expect(price.textContent).toContain("2,000");
+
+    const compact = screen.getByText("Voice Agents").closest("li")!;
+    expect(within(compact).getAllByText(/Real-time|De-duplication|Field mapping|Retries/)).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "اسأل المساعد الذكي" })).toBeInTheDocument();
   });
 
   it("prefills the booking form from a service card", () => {

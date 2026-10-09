@@ -107,3 +107,27 @@ Headers: `X-Afaq-Signature: sha256=<hex HMAC of raw body with N8N_WEBHOOK_SECRET
 - Pest: `EstimateCalculator` table-driven unit tests.
 - Pest: `NotifyN8nOfInquiry` signs payload correctly (`Http::fake()` + assert header), retries on 500.
 - Playwright: complete the 5 steps in `ar` and `en`; server error mapping returns to step 4 for a bad email.
+
+## 9. As built (Phase 6)
+
+```
+src/lib/booking/schema.ts            # zod schema (mirrors the API rules), steps → fields, payload + UTM helpers
+src/components/booking/
+├── booking-form.tsx                 # one RHF instance, 5 steps, draft, prefill, submit + problem mapping
+├── booking-steps.tsx                # Service · Scope · Budget · Contact · Review (+ honeypot)
+├── estimate-card.tsx                # live indicative estimate (+ "budget may cover an MVP" notice)
+├── use-live-estimate.ts             # POST /service-requests/estimate, 400 ms debounce, aborts stale requests
+└── booking-success.tsx              # reference + copy, estimate recap, what happens next
+```
+
+- **Steps:** Service → Scope (requirements ≥ 20 chars, complexity 1–5, timeline) → Budget → Contact → Review + consent. Each step is validated with `trigger(fields)` before advancing; the progress bar lets you jump back to any reached step, and Review has per-row **Edit**.
+- **Live estimate:** shown in a sticky side summary on large screens and inside the Budget step on small ones.
+- **Draft:** answers (never consent or the honeypot) are saved to `sessionStorage` (`afaq-booking-draft`) and restored with a notice; cleared on success.
+- **Prefill:** "Request this service" on a card (or `useUiStore.prefillBooking`) selects the service and jumps to Scope.
+- **Errors:**
+  - `422`: field messages are set on the fields and the form jumps to the first step that owns one.
+  - `409`: shows the existing reference.
+  - `429`: shows the wait time.
+  - Network errors: the answers are kept.
+- **UTM:** `utm_source/medium/campaign` from the landing URL are sent as `utm`.
+- **Verified live (2026-10-09):** a QA submission (`qa.test.lead@example.com`) created `AFQ-JB720N` (`web_form`, estimate $2,150–$3,300, 3–5 weeks). `NotifyN8nOfInquiry` ran and skipped because `N8N_WEBHOOK_URL` is empty locally.

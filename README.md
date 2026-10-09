@@ -55,7 +55,7 @@ Details: [docs/04_features/rag_and_ai_agent.md](docs/04_features/rag_and_ai_agen
 3. ✅ RAG pipeline, AI agent with tool calling, n8n webhook
 4. ✅ Public API, frontend foundations: theme, RTL/LTR, Zustand bridge, UI kit
 5. ✅ 3D canvas (R3F): procedural n8n nodes, laser edges with data packets, exploded view, quality tiers and 2D fallback
-6. Core sections and Copilot UI
+6. ✅ Copilot chat widget, multi-step booking & estimator, hero / services bento / team showcase
 7. Testing, hardening, deployment
 
 The full plan is in [`afaq_automation_agency_master_plan.md`](afaq_automation_agency_master_plan.md).

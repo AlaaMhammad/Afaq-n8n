@@ -32,7 +32,8 @@ src/
 │   ├── sections/        Hero (+ 3D core), Services, Portfolio explorer, Team (+ CV dialog), Booking
 │   ├── portfolio/       Workflow stage (3D ⇄ 2D), 2D diagram (SSR poster + fallback), step list, scroll reveal
 │   ├── three/           R3F scenes: canvas wrapper, workflow nodes/edges/packets, camera rig, label layer, hero core
-│   ├── assistant/       AgentActionRunner (AI agent → page bridge)
+│   ├── assistant/       Copilot widget (launcher + lazy panel), markdown, composer, AgentActionRunner
+│   ├── booking/         5-step booking & live estimator (react-hook-form + zod)
 │   └── providers/       next-themes + tooltip providers
 ├── stores/              Zustand: scene (3D), agent (Copilot + action queue), ui
 └── lib/                 api (client, cached content fetchers, SSE client, booking), agent (action schemas + runner),

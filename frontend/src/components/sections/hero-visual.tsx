@@ -43,6 +43,7 @@ export function HeroVisual() {
           <AutomationCore label={t("coreLabel")} theme={resolvedTheme} onReady={() => setReadyAttempt(renderAttempt)} />
         </div>
       )}
+      {live && <p className="pointer-events-none absolute inset-x-0 -bottom-8 text-center text-xs text-muted">{t("coreHint")}</p>}
     </div>
   );
 }

@@ -79,6 +79,14 @@
   @keyframes dash {
     to { stroke-dashoffset: -12; }
   }
+
+  --animate-pop: pop 0.5s ease-out;
+
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
 }
 
 @layer base {
@@ -139,4 +147,137 @@
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+/* ---------- Afaq Copilot (Phase 6) ---------- */
+
+/* Markdown inside assistant bubbles: compact, theme-aware, no layout escapes. */
+.copilot-prose {
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.copilot-prose > * + * {
+  margin-top: 0.5em;
+}
+.copilot-prose ul,
+.copilot-prose ol {
+  padding-inline-start: 1.25em;
+}
+.copilot-prose ul {
+  list-style: disc;
+}
+.copilot-prose ol {
+  list-style: decimal;
+}
+.copilot-prose li + li {
+  margin-top: 0.2em;
+}
+.copilot-prose strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+.copilot-prose a {
+  color: var(--pulse);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.copilot-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  border-radius: 0.375rem;
+  background: var(--surface);
+  padding: 0.1em 0.35em;
+}
+.copilot-prose pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: var(--surface);
+  padding: 0.6em 0.8em;
+}
+.copilot-prose pre code {
+  background: none;
+  padding: 0;
+}
+.copilot-prose h1,
+.copilot-prose h2,
+.copilot-prose h3 {
+  font-weight: 600;
+  font-size: 1em;
+}
+.copilot-prose table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.copilot-prose th,
+.copilot-prose td {
+  border: 1px solid var(--border);
+  padding: 0.3em 0.55em;
+  text-align: start;
+}
+.copilot-prose blockquote {
+  border-inline-start: 3px solid var(--pulse);
+  padding-inline-start: 0.75em;
+  color: var(--muted);
+}
+
+/* Blinking block caret after the last streamed character. */
+.copilot-caret > .copilot-prose > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-inline-start: 0.15em;
+  vertical-align: -0.15em;
+  background: var(--pulse);
+  animation: copilot-caret 1s steps(2, start) infinite;
+}
+
+@keyframes copilot-caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Faint scanlines on the dark console panel (decorative; light theme stays clean). */
+.dark .copilot-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(255 255 255 / 0.015) 3px 4px);
+}
+
+/* ---------- Team tilt cards ---------- */
+.tilt-card {
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transform-style: preserve-3d;
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s;
+  will-change: transform;
+}
+.tilt-card[data-tilting] {
+  transition:
+    transform 0.08s linear,
+    border-color 0.2s;
+}
+.tilt-card .tilt-glare {
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), rgb(255 255 255 / 0.1), transparent 55%);
+}
+.tilt-card[data-tilting] .tilt-glare {
+  opacity: 1;
+}
+/* Depth: the avatar floats slightly above the card while tilting. */
+.tilt-card [data-depth] {
+  transform: translateZ(28px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card {
+    transform: none !important;
+  }
+  .tilt-card [data-depth] {
+    transform: none;
+  }
 }
