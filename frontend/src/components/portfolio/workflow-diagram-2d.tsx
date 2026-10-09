@@ -3,11 +3,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Workflow } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { mainEdges, subNodeIds } from "@/lib/workflow";
 import { useSceneStore } from "@/stores/scene-store";
 import { N8nNodeBox, nodeSubtitle } from "./n8n-node";
 
 /** Scene units → pixels, capped for large stages. */
 const MAX_UNIT = 46;
+/** Below this the canvas scrolls sideways (like panning in n8n) instead of shrinking further. */
+const MIN_UNIT = 26;
 /** Half the node column width plus a small gutter, so outer labels never clip. */
 const NODE_HALF_PX = 54;
 
@@ -19,8 +22,15 @@ export const nodeSizeFor = (unit: number) => Math.round(Math.min(64, Math.max(34
 
 /** Output handles per node: routers fan out to at least two branches, like n8n's IF/Switch. */
 export function outputCount(workflow: Workflow, nodeId: string, kind: string): number {
-  const outgoing = workflow.edges.filter((edge) => edge.from === nodeId).length;
+  const outgoing = mainEdges(workflow).filter((edge) => edge.from === nodeId).length;
   return Math.max(kind === "router" ? 2 : 1, outgoing);
+}
+
+/** n8n AI sub-node attachment: from the sub-node's top handle up into the bottom of its agent. */
+export function subConnectionPath(sub: { x: number; y: number }, parent: { x: number; y: number }): string {
+  const bend = Math.max(18, Math.abs(sub.y - parent.y) * 0.5);
+  const f = (v: number) => v.toFixed(1);
+  return `M${f(sub.x)} ${f(sub.y)} C${f(sub.x)} ${f(sub.y - bend)} ${f(parent.x)} ${f(parent.y + bend)} ${f(parent.x)} ${f(parent.y)}`;
 }
 
 /** n8n-style connection: leaves the output handle horizontally and enters the input handle horizontally. */
@@ -48,7 +58,7 @@ interface WorkflowDiagram2DProps {
 export function WorkflowDiagram2D({ workflow, exploded, flow = 1, concealed = false }: WorkflowDiagram2DProps) {
   const stage = useRef<HTMLDivElement>(null);
   const markerId = useId().replace(/:/g, "");
-  const [unit, setUnit] = useState(MAX_UNIT);
+  const [box, setBox] = useState<{ unit: number; width: number }>({ unit: MAX_UNIT, width: 0 });
   const selectedNodeId = useSceneStore((s) => s.selectedNodeId);
   const hoveredNodeId = useSceneStore((s) => s.hoveredNodeId);
   const selectNode = useSceneStore((s) => s.selectNode);
@@ -58,12 +68,22 @@ export function WorkflowDiagram2D({ workflow, exploded, flow = 1, concealed = fa
     const element = stage.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const reach = reachX(workflow);
-    const observer = new ResizeObserver(([entry]) => setUnit(Math.max(8, Math.min(MAX_UNIT, (entry.contentRect.width / 2 - NODE_HALF_PX) / reach))));
+    const observer = new ResizeObserver(([entry]) => {
+      const fit = (entry.contentRect.width / 2 - NODE_HALF_PX) / reach;
+      const unit = Math.min(MAX_UNIT, Math.max(MIN_UNIT, fit));
+      // Wider than the stage → the inner canvas grows and the stage scrolls sideways.
+      setBox({ unit, width: fit < MIN_UNIT ? Math.ceil(2 * (reach * unit + NODE_HALF_PX)) : 0 });
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, [workflow]);
 
+  const { unit, width } = box;
   const size = nodeSizeFor(unit);
+  // Dense workflows (n8n spacing shrinks): narrower, wrapping labels instead of overlapping ones.
+  const labelWidth = Math.round(Math.min(112, Math.max(64, unit * 2.2)));
+  const subs = subNodeIds(workflow);
+  const main = mainEdges(workflow);
   const half = size / 2;
   const progress = exploded ? 1 : 0;
   const at = (node: Workflow["nodes"][number]) => ({
@@ -78,74 +98,112 @@ export function WorkflowDiagram2D({ workflow, exploded, flow = 1, concealed = fa
       aria-hidden={concealed || undefined}
       inert={concealed || undefined}
       className={cn(
-        "absolute inset-0 bg-[radial-gradient(circle,var(--n8n-dot)_1px,transparent_1.2px)] [--n8n-dot:#c9c9d2] [background-size:20px_20px] transition-opacity duration-700 dark:[--n8n-dot:#3a3a40]",
+        "absolute inset-0 overflow-x-auto overflow-y-hidden overscroll-x-contain bg-[radial-gradient(circle,var(--n8n-dot)_1px,transparent_1.2px)] [--n8n-dot:#c9c9d2] [background-size:20px_20px] transition-opacity duration-700 dark:[--n8n-dot:#3a3a40]",
         concealed && "pointer-events-none opacity-0",
       )}
     >
-      {/* 1px SVG anchored at the stage centre (a zero-size outer <svg> is not rendered at all). */}
-      <svg className="absolute left-1/2 top-1/2 size-px overflow-visible" aria-hidden>
-        <defs>
-          <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L10 5 L0 10 z" fill="#8a8a93" />
-          </marker>
-        </defs>
-        {workflow.edges.map((edge) => {
-          const from = byId.get(edge.from);
-          const to = byId.get(edge.to);
-          if (!from || !to) return null;
-          const outs = outputCount(workflow, from.id, from.kind);
-          const portIndex = Math.max(0, workflow.edges.filter((e) => e.from === from.id).indexOf(edge));
-          const a = at(from);
-          const b = at(to);
-          const start = { x: a.x + flow * half, y: a.y - half + ((portIndex + 1) / (outs + 1)) * size };
-          const end = { x: b.x - flow * (half + 6), y: b.y };
-          const d = connectionPath(start, end, flow);
-          const hot = [hoveredNodeId, selectedNodeId].some((id) => id === edge.from || id === edge.to);
+      <div className="relative h-full" style={{ width: width || "100%" }}>
+        {/* 1px SVG anchored at the stage centre (a zero-size outer <svg> is not rendered at all). */}
+        <svg className="absolute left-1/2 top-1/2 size-px overflow-visible" aria-hidden>
+          <defs>
+            <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#8a8a93" />
+            </marker>
+          </defs>
+          {workflow.edges.map((edge) => {
+            const from = byId.get(edge.from);
+            const to = byId.get(edge.to);
+            if (!from || !to) return null;
+            if (edge.type === "ai") {
+              // AI sub-node → agent: dashed, from the round sub-node's top into the agent's bottom.
+              const s = at(from);
+              const p = at(to);
+              const d = subConnectionPath({ x: s.x, y: s.y - half }, { x: p.x, y: p.y + half });
+              return (
+                <path
+                  key={`${edge.from}-${edge.to}`}
+                  d={d}
+                  style={{ d: `path("${d}")` }}
+                  fill="none"
+                  stroke="#8a8a93"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  className="transition-[d] duration-700 ease-out"
+                />
+              );
+            }
+            const outs = outputCount(workflow, from.id, from.kind);
+            const portIndex = Math.max(0, main.filter((e) => e.from === from.id).indexOf(edge));
+            const a = at(from);
+            const b = at(to);
+            const start = { x: a.x + flow * half, y: a.y - half + ((portIndex + 1) / (outs + 1)) * size };
+            const end = { x: b.x - flow * (half + 6), y: b.y };
+            const d = connectionPath(start, end, flow);
+            const hot = [hoveredNodeId, selectedNodeId].some((id) => id === edge.from || id === edge.to);
+            return (
+              <g key={`${edge.from}-${edge.to}`}>
+                <path
+                  d={d}
+                  style={{ d: `path("${d}")` }}
+                  fill="none"
+                  stroke={hot ? "#3fb950" : "#8a8a93"}
+                  strokeWidth={hot ? 2.5 : 2}
+                  markerEnd={`url(#${markerId})`}
+                  className="transition-[d,stroke] duration-700 ease-out"
+                />
+                {/* data flowing along the connection */}
+                <path
+                  d={d}
+                  style={{ d: `path("${d}")` }}
+                  fill="none"
+                  stroke="#3fb950"
+                  strokeWidth={2}
+                  strokeDasharray="4 14"
+                  className="animate-dash opacity-70 transition-[d] duration-700 ease-out motion-reduce:hidden"
+                />
+                {(edge.label || edge.fromPort) && (
+                  <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 8} textAnchor="middle" className="fill-muted font-mono text-[10px]">
+                    {edge.label ?? edge.fromPort}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {workflow.nodes.map((node) => {
+          const { x, y } = at(node);
+          const engaged = selectedNodeId === node.id || hoveredNodeId === node.id;
           return (
-            <g key={`${edge.from}-${edge.to}`}>
-              <path
-                d={d}
-                style={{ d: `path("${d}")` }}
-                fill="none"
-                stroke={hot ? "#3fb950" : "#8a8a93"}
-                strokeWidth={hot ? 2.5 : 2}
-                markerEnd={`url(#${markerId})`}
-                className="transition-[d,stroke] duration-700 ease-out"
+            <button
+              key={node.id}
+              type="button"
+              onClick={() => selectNode(selectedNodeId === node.id ? null : node.id)}
+              onPointerEnter={() => hoverNode(node.id)}
+              onPointerLeave={() => hoverNode(null)}
+              aria-pressed={selectedNodeId === node.id}
+              // Physical coordinates (localizeWorkflow() already mirrored X for RTL); the node body's
+              // centre sits on the point, so connections meet the handles exactly.
+              className="absolute left-1/2 top-1/2 flex flex-col items-center gap-1.5 rounded-lg transition-transform duration-700 ease-out focus-visible:outline-offset-4"
+              style={{ width: labelWidth, transform: `translate(calc(${x.toFixed(1)}px - 50%), ${(y - half).toFixed(1)}px)` }}
+            >
+              <N8nNodeBox
+                node={node}
+                size={subs.has(node.id) ? Math.round(size * 0.82) : size}
+                flow={flow}
+                outputs={outputCount(workflow, node.id, node.kind)}
+                engaged={engaged}
+                selected={selectedNodeId === node.id}
+                sub={subs.has(node.id)}
               />
-              {/* data flowing along the connection */}
-              <path d={d} style={{ d: `path("${d}")` }} fill="none" stroke="#3fb950" strokeWidth={2} strokeDasharray="4 14" className="animate-dash opacity-70 transition-[d] duration-700 ease-out motion-reduce:hidden" />
-              {(edge.label || edge.fromPort) && (
-                <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 8} textAnchor="middle" className="fill-muted font-mono text-[10px]">
-                  {edge.label ?? edge.fromPort}
-                </text>
-              )}
-            </g>
+              <span className={cn("max-w-full text-center font-semibold leading-tight text-foreground", unit < 34 ? "text-[10px]" : "text-[11px]")}>
+                {node.label}
+              </span>
+              <span className="-mt-1 max-w-full truncate text-center text-[9px] text-muted">{nodeSubtitle(node)}</span>
+            </button>
           );
         })}
-      </svg>
-
-      {workflow.nodes.map((node) => {
-        const { x, y } = at(node);
-        const engaged = selectedNodeId === node.id || hoveredNodeId === node.id;
-        return (
-          <button
-            key={node.id}
-            type="button"
-            onClick={() => selectNode(selectedNodeId === node.id ? null : node.id)}
-            onPointerEnter={() => hoverNode(node.id)}
-            onPointerLeave={() => hoverNode(null)}
-            aria-pressed={selectedNodeId === node.id}
-            // Physical coordinates (localizeWorkflow() already mirrored X for RTL); the node body's
-            // centre sits on the point, so connections meet the handles exactly.
-            className="absolute left-1/2 top-1/2 flex w-28 flex-col items-center gap-1.5 rounded-lg transition-transform duration-700 ease-out focus-visible:outline-offset-4"
-            style={{ transform: `translate(calc(${x.toFixed(1)}px - 50%), ${(y - half).toFixed(1)}px)` }}
-          >
-            <N8nNodeBox node={node} size={size} flow={flow} outputs={outputCount(workflow, node.id, node.kind)} engaged={engaged} selected={selectedNodeId === node.id} />
-            <span className="max-w-full text-center text-[11px] font-semibold leading-tight text-foreground">{node.label}</span>
-            <span className="-mt-1 max-w-full truncate text-center text-[9px] text-muted">{nodeSubtitle(node)}</span>
-          </button>
-        );
-      })}
+      </div>
     </div>
   );
 }

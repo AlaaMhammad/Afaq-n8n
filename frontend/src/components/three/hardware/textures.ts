@@ -125,11 +125,12 @@ export function chipTexture(monogramText: string, name: string, role: string, ac
  * Face of an n8n node tile: the integration's real icon centred on a transparent plate, plus the
  * green "executed" check badge n8n shows after a successful run.
  */
-export function nodeFaceTexture(icon: IntegrationIcon, color: string, flow: 1 | -1): Texture | null {
+export function nodeFaceTexture(icon: IntegrationIcon, color: string, flow: 1 | -1, badge = true): Texture | null {
   const id = icon.kind === "brand" ? icon.title : icon.name;
-  return canvasTexture(`face:${id}:${color}:${flow}`, 256, 256, (ctx, w) => {
+  return canvasTexture(`face:${id}:${color}:${flow}:${badge}`, 256, 256, (ctx, w) => {
     ctx.clearRect(0, 0, w, w);
     drawIcon(ctx, icon, w * 0.27, w * 0.27, w * 0.46, color);
+    if (!badge) return;
     const cx = flow === 1 ? w * 0.82 : w * 0.18;
     const cy = w * 0.82;
     ctx.fillStyle = "#3fb950";

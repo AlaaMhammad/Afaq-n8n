@@ -330,3 +330,20 @@ Cables plug into the pin tips (`PIN_REACH`). Tube geometry is rebuilt only when 
 - **Rack blades and the booking cartridge** show the service's real mark on a light badge (`panelTexture(…, icon)`).
 - **Budget:** 13 brand icons bundled (+~10 KB initial JS, 323 KB gzip); the lazy 3D is ~252 KB gzip including `SVGLoader`.
 - **Verification status:** unit tests cover icon mapping, colour lifting, subtitles, handle counts and connection paths (81 frontend tests); typecheck, lint and the production build pass. **Not yet inspected in a visible browser.**
+
+### 12.1 AI sub-nodes and the recruitment pipeline (2026-10-09)
+
+- **Edge `type`:** edges can carry `type: "ai"` for an AI sub-node (model, memory or tool) attached to its agent or chain. The backend keeps the field only when it isn't the default `main`; the admin edge editor gained a "Connection" select; workflows may have up to 24 nodes.
+- **Rendering**, in both 2D and 3D:
+  - Sub-nodes are round, with n8n's diamond handle on top.
+  - Attachments run dashed (2D) or as thin vertical lines (3D) from the sub-node's top up into the agent's bottom, with no arrowhead and no packets.
+  - Handle counts and branch ports ignore attachments.
+- **Wide workflows:** below `MIN_UNIT` (26 px per scene unit) the 2D canvas stops shrinking and scrolls sideways, like panning in n8n; labels narrow and wrap when nodes are dense. The 3D view fits the whole workflow (`fitCamera`), and its labels wrap at 7.5 rem.
+- **Step list** (`orderedNodes`): a depth-first walk of the data connections that covers every branch, with each sub-node listed right after the node it serves.
+- **Project 4 — `ai-recruitment-pipeline`:** a compact 16-node version of the client's real n8n recruitment workflow.
+  - **Intake:** Form Trigger → Extract PDF → Sheets (find candidate) → IF "already applied" (true → a form page).
+  - **Scoring:** a Basic LLM Chain with Gemini scores the CV → IF score ≥ 70.
+  - **Score ≥ 70:** an AI Agent with Gemini and memory → Check Calendar → Create Meet & Event → Gmail acceptance.
+  - **Below 70:** Sheets (rejected) → Gmail rejection.
+
+  It has a bilingual case study in the knowledge base, so the Copilot can describe it and `trigger_3d_workflow` can show it.

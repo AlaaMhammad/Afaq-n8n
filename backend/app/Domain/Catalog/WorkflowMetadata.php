@@ -11,6 +11,9 @@ final class WorkflowMetadata
 {
     public const NODE_KINDS = ['trigger', 'router', 'action', 'ai', 'storage'];
 
+    /** `main` = data connection; `ai` = an AI sub-node (model, memory, tool) attached to its agent/chain. */
+    public const EDGE_TYPES = ['main', 'ai'];
+
     private const DEFAULT_CAMERA = ['position' => [0, 2.5, 9], 'target' => [0, 0, 0]];
 
     /**
@@ -40,6 +43,8 @@ final class WorkflowMetadata
             'from' => $edge['from'] ?? null,
             'to' => $edge['to'] ?? null,
             'fromPort' => filled($edge['fromPort'] ?? null) ? $edge['fromPort'] : null,
+            // Only stored when it isn't the default, so existing workflows stay unchanged.
+            'type' => filled($edge['type'] ?? null) && $edge['type'] !== 'main' ? $edge['type'] : null,
             'label' => filled(data_get($edge, 'label.ar')) || filled(data_get($edge, 'label.en'))
                 ? ['ar' => (string) data_get($edge, 'label.ar', ''), 'en' => (string) data_get($edge, 'label.en', '')]
                 : null,
@@ -84,6 +89,9 @@ final class WorkflowMetadata
             }
         }
         foreach ($data['edges'] ?? [] as $i => $edge) {
+            if (isset($edge['type']) && ! in_array($edge['type'], self::EDGE_TYPES, true)) {
+                $errors[] = 'Edge #'.($i + 1).' has an unknown type "'.$edge['type'].'".';
+            }
             foreach (['from', 'to'] as $end) {
                 if (! in_array($edge[$end] ?? null, $ids, true)) {
                     $errors[] = 'Edge #'.($i + 1).' points to unknown node "'.($edge[$end] ?? '').'".';

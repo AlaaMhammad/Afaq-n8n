@@ -8,7 +8,7 @@ import { clamp01 } from "@/lib/stage/progress";
 import type { ScenePalette } from "@/lib/theme/palette";
 import { useSceneStore } from "@/stores/scene-store";
 import { Cable, type CableEnds } from "../hardware/cable";
-import { TILE_REACH, outputHandleY } from "../hardware/n8n-tile";
+import { SUB_RADIUS, TILE, TILE_REACH, outputHandleY } from "../hardware/n8n-tile";
 import { edgeLabelKey, placeLabel, type LabelRegistry } from "./label-layer";
 import { separationOf } from "./workflow-node";
 import type { SimNode, WorkflowSim } from "./workflow-sim";
@@ -41,10 +41,17 @@ export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, port, 
   const to = sim.node(edge.to);
   const hot = useSceneStore((s) => [edge.from, edge.to].includes(s.hoveredNodeId ?? "") || [edge.from, edge.to].includes(s.selectedNodeId ?? ""));
 
+  const attachment = edge.type === "ai";
+
   const readEnds = () => {
     const { ends } = work.current;
     ends.flow = flow;
-    if (from && to) {
+    if (from && to && attachment) {
+      ends.from.copy(from.position);
+      ends.from.y += SUB_RADIUS + 0.12;
+      ends.to.copy(to.position);
+      ends.to.y -= TILE / 2 + 0.02;
+    } else if (from && to) {
       ends.from.copy(from.position);
       ends.from.x += flow * pinReach(from);
       ends.from.y += outputHandleY(port.index, port.count) * (1 + from.peek * 0.06);
@@ -74,6 +81,7 @@ export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, port, 
         reducedMotion={reducedMotion}
         hot={hot}
         variant="n8n"
+        axis={attachment ? "y" : "x"}
         onCurve={(c) => {
           curve.current = c;
         }}

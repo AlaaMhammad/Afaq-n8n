@@ -230,5 +230,9 @@
     "Within 1 month": "خلال شهر",
     "Won": "تم الفوز",
     "You are not allowed to do this": "غير مسموح لك بتنفيذ هذا الإجراء",
-    "You will get a notification when it completes.": "ستصلك إشعار عند الانتهاء."
+    "You will get a notification when it completes.": "ستصلك إشعار عند الانتهاء.",
+    "Connection": "الاتصال",
+    "Data": "بيانات",
+    "AI sub-node": "عقدة ذكاء اصطناعي فرعية",
+    "AI sub-node: a model, memory or tool attached to its agent": "عقدة فرعية: نموذج أو ذاكرة أو أداة مرتبطة بالوكيل"
 }

@@ -18,9 +18,9 @@ beforeEach(function () {
 
 it('seeds the day-one demo content', function () {
     expect(Service::count())->toBe(5)
-        ->and(Project::count())->toBe(3)
+        ->and(Project::count())->toBe(4)
         ->and(TeamMember::count())->toBe(4)
-        ->and(KnowledgeDocument::sources()->count())->toBe(34)
+        ->and(KnowledgeDocument::sources()->count())->toBe(36)
         ->and(ServiceRequest::count())->toBe(25)
         ->and(User::where('is_admin', true)->count())->toBe(1);
 });
@@ -45,7 +45,7 @@ it('seeds valid 3D workflows for every project', function () {
     });
 
     expect(Project::pluck('slug')->sort()->values()->all())
-        ->toBe(['autonomous-invoice-extractor', 'lead-enrichment-engine', 'omnichannel-support-sync']);
+        ->toBe(['ai-recruitment-pipeline', 'autonomous-invoice-extractor', 'lead-enrichment-engine', 'omnichannel-support-sync']);
 });
 
 it('fills every translatable field in Arabic and English', function () {
@@ -62,7 +62,7 @@ it('fills every translatable field in Arabic and English', function () {
 it('pairs every knowledge topic in both languages', function () {
     $byKey = KnowledgeDocument::sources()->get()->groupBy(fn ($doc) => $doc->metadata['seed_key']);
 
-    expect($byKey)->toHaveCount(17);
+    expect($byKey)->toHaveCount(18);
     $byKey->each(fn ($docs) => expect($docs->pluck('locale')->sort()->values()->all())->toBe(['ar', 'en']));
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Workflow } from "@/lib/api/types";
-import { localizeWorkflow, nodePositionAt, orderedNodes } from "./workflow";
+import { localizeWorkflow, mainEdges, nodePositionAt, orderedNodes, subNodeIds } from "./workflow";
 
 const workflow: Workflow = {
   version: 1,
@@ -32,5 +32,31 @@ describe("workflow helpers", () => {
 
   it("orders nodes along the data flow", () => {
     expect(orderedNodes(workflow).map((n) => n.id)).toEqual(["webhook", "router", "ticket"]);
+  });
+});
+
+describe("branching workflows with AI sub-nodes", () => {
+  const node = (id: string, kind: "trigger" | "router" | "action" | "ai" | "storage" = "action") => ({ id, kind, label: id, n8nType: "x", position: [0, 0, 0] as [number, number, number], exploded: [0, 0, 0] as [number, number, number] });
+  const workflow = {
+    version: 1,
+    camera: null,
+    nodes: [node("form", "trigger"), node("check", "router"), node("dup"), node("agent", "ai"), node("model", "ai"), node("memory", "storage"), node("mail")],
+    edges: [
+      { from: "form", to: "check" },
+      { from: "check", to: "dup", fromPort: "true" },
+      { from: "check", to: "agent", fromPort: "false" },
+      { from: "model", to: "agent", type: "ai" as const },
+      { from: "memory", to: "agent", type: "ai" as const },
+      { from: "agent", to: "mail" },
+    ],
+  };
+
+  it("walks every branch from the trigger and lists sub-nodes right after their agent", () => {
+    expect(orderedNodes(workflow).map((n) => n.id)).toEqual(["form", "check", "dup", "agent", "model", "memory", "mail"]);
+  });
+
+  it("separates data connections from AI attachments", () => {
+    expect(mainEdges(workflow)).toHaveLength(4);
+    expect([...subNodeIds(workflow)]).toEqual(["model", "memory"]);
   });
 });

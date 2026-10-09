@@ -293,6 +293,7 @@ interface WorkflowMetadata {
     from: string;                    // node id
     to: string;
     fromPort?: string;               // "main", "true", "false"
+    type?: "main" | "ai";            // "ai": AI sub-node (model, memory, tool) → its agent; drawn dashed, sub-node is round
     label?: { ar: string; en: string };
     animated?: boolean;              // packet particles
   }>;

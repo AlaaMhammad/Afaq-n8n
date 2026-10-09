@@ -158,7 +158,7 @@ class ProjectForm
                         ->collapsed()
                         ->reorderable()
                         ->minItems(1)
-                        ->maxItems(12)
+                        ->maxItems(24)
                         ->addActionLabel(__('Add node')),
                 ]),
 
@@ -168,10 +168,15 @@ class ProjectForm
                     Repeater::make('workflow_metadata.edges')
                         ->hiddenLabel()
                         ->schema([
-                            Grid::make(4)->schema([
+                            Grid::make(5)->schema([
                                 Select::make('from')->options(self::nodeOptions(...))->required(),
                                 Select::make('to')->options(self::nodeOptions(...))->required(),
                                 TextInput::make('fromPort')->label(__('Output port'))->placeholder('main'),
+                                Select::make('type')
+                                    ->label(__('Connection'))
+                                    ->options(['main' => __('Data'), 'ai' => __('AI sub-node')])
+                                    ->default('main')
+                                    ->helperText(__('AI sub-node: a model, memory or tool attached to its agent')),
                                 Toggle::make('animated')->label(__('Animated packets'))->default(true)->inline(false),
                             ]),
                             Grid::make(2)->schema([

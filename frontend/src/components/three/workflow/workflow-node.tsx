@@ -18,6 +18,7 @@ interface WorkflowNodeProps {
   palette: ScenePalette;
   flow: 1 | -1;
   outputs: number;
+  sub: boolean;
 }
 
 /** Layer separation of a node: its explode spring (can overshoot below 0 — the "snap") plus hover peek. */
@@ -28,7 +29,7 @@ export const separationOf = (node: SimNode) => node.spring.x * 0.85 + node.peek 
  * hover/selection to the scene store, so the DOM step list, the 2D diagram and the AI agent all
  * share the same selection.
  */
-export function WorkflowNode({ node, data, labels, palette, flow, outputs }: WorkflowNodeProps) {
+export function WorkflowNode({ node, data, labels, palette, flow, outputs, sub }: WorkflowNodeProps) {
   const group = useRef<Group>(null);
   const anchor = useRef(new Vector3());
   const hot = useSceneStore((s) => s.hoveredNodeId === node.id || s.selectedNodeId === node.id);
@@ -62,7 +63,7 @@ export function WorkflowNode({ node, data, labels, palette, flow, outputs }: Wor
 
   return (
     <group ref={group} position={node.position} onPointerOver={onOver} onPointerOut={onOut} onClick={onClick}>
-      <N8nTile kind={node.kind} n8nType={data.n8nType} palette={palette} flow={flow} outputs={outputs} separation={() => separationOf(node)} hot={hot} selected={selected} />
+      <N8nTile kind={node.kind} n8nType={data.n8nType} palette={palette} flow={flow} outputs={outputs} separation={() => separationOf(node)} hot={hot} selected={selected} sub={sub} />
     </group>
   );
 }

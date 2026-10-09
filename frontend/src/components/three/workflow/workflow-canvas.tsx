@@ -8,6 +8,7 @@ import type { Workflow } from "@/lib/api/types";
 import { useFinePointer, useReducedMotion } from "@/lib/hooks/use-media-query";
 import { scenePalette, type ScenePalette } from "@/lib/theme/palette";
 import { useSceneStore } from "@/stores/scene-store";
+import { mainEdges, subNodeIds } from "@/lib/workflow";
 import { StageView } from "../stage/stage-view";
 import { DEFAULT_CAMERA } from "../utils/camera";
 import { settingsFor, type QualitySettings } from "../utils/quality";
@@ -85,9 +86,10 @@ function WorkflowWorld({ workflow, labels, palette, settings, flow, reducedMotio
   const byId = useMemo(() => new Map(workflow.nodes.map((node) => [node.id, node])), [workflow]);
   // Output handles per node and which handle each connection leaves from (n8n IF/Switch fan-out).
   const ports = useMemo(() => {
-    const count = new Map(workflow.nodes.map((node) => [node.id, Math.max(node.kind === "router" ? 2 : 1, workflow.edges.filter((e) => e.from === node.id).length)]));
-    const index = new Map(workflow.edges.map((edge) => [`${edge.from}-${edge.to}`, workflow.edges.filter((e) => e.from === edge.from).indexOf(edge)]));
-    return { count, index };
+    const main = mainEdges(workflow);
+    const count = new Map(workflow.nodes.map((node) => [node.id, Math.max(node.kind === "router" ? 2 : 1, main.filter((e) => e.from === node.id).length)]));
+    const index = new Map(main.map((edge) => [`${edge.from}-${edge.to}`, main.filter((e) => e.from === edge.from).indexOf(edge)]));
+    return { count, index, subs: subNodeIds(workflow) };
   }, [workflow]);
 
   // Registered after the children's callbacks, so every node and cable reads the same
@@ -112,7 +114,7 @@ function WorkflowWorld({ workflow, labels, palette, settings, flow, reducedMotio
     <>
       <group ref={root}>
         {sim.nodes.map((node) => (
-          <WorkflowNode key={node.id} node={node} data={byId.get(node.id)!} labels={labels} palette={palette} flow={flow} outputs={ports.count.get(node.id) ?? 1} />
+          <WorkflowNode key={node.id} node={node} data={byId.get(node.id)!} labels={labels} palette={palette} flow={flow} outputs={ports.count.get(node.id) ?? 1} sub={ports.subs.has(node.id)} />
         ))}
         {workflow.edges.map((edge) => (
           <WorkflowEdge

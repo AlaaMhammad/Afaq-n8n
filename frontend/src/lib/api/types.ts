@@ -36,6 +36,8 @@ export interface WorkflowEdge {
   fromPort?: string;
   label?: string;
   animated?: boolean;
+  /** `ai`: an AI sub-node (model, memory, tool) attached to its agent/chain — dashed, round sub-node. */
+  type?: "main" | "ai";
 }
 
 export interface Workflow {

@@ -42,8 +42,23 @@ it('reports graph problems', function (Closure $mutate, string $expected) {
     'bad kind' => [function (&$d) {
         $d['nodes'][0]['kind'] = 'blob';
     }, 'unknown kind'],
+    'bad edge type' => [function (&$d) {
+        $d['edges'][0]['type'] = 'magic';
+    }, 'unknown type "magic"'],
     'bad id' => [function (&$d) {
         $d['nodes'][0]['id'] = 'Web Hook';
         $d['edges'] = [];
     }, 'lowercase'],
 ]);
+
+it('keeps AI sub-node connections and drops the default edge type', function () {
+    $data = validWorkflow();
+    $data['edges'][] = ['from' => 'crm', 'to' => 'webhook', 'type' => 'ai'];
+    $data['edges'][0]['type'] = 'main';
+
+    $normalized = WorkflowMetadata::normalize($data);
+
+    expect($normalized['edges'][0])->not->toHaveKey('type')
+        ->and($normalized['edges'][1]['type'])->toBe('ai')
+        ->and(WorkflowMetadata::errors($normalized))->toBe([]);
+});

@@ -25,20 +25,33 @@ export function nodePositionAt(node: WorkflowNode, progress: number): Vec3 {
   ];
 }
 
-/** Nodes in data-flow order (follows edges from the trigger), falling back to declaration order. */
+/** Data connections only (AI sub-node attachments excluded). */
+export const mainEdges = (workflow: Pick<Workflow, "edges">) => workflow.edges.filter((edge) => edge.type !== "ai");
+
+/** Ids of AI sub-nodes (models, memory, tools) — drawn round, attached under their agent like in n8n. */
+export const subNodeIds = (workflow: Pick<Workflow, "edges">) => new Set(workflow.edges.filter((edge) => edge.type === "ai").map((edge) => edge.from));
+
+/**
+ * Nodes in data-flow order: a depth-first walk of the data connections from the trigger (every branch,
+ * in output order), each AI sub-node right after the node it serves, then anything unreached.
+ */
 export function orderedNodes(workflow: Workflow): WorkflowNode[] {
   const byId = new Map(workflow.nodes.map((node) => [node.id, node]));
-  const targets = new Set(workflow.edges.map((edge) => edge.to));
-  const start = workflow.nodes.find((node) => !targets.has(node.id)) ?? workflow.nodes[0];
+  const main = mainEdges(workflow);
+  const subs = subNodeIds(workflow);
+  const targets = new Set(main.map((edge) => edge.to));
+  const start = workflow.nodes.find((node) => !targets.has(node.id) && !subs.has(node.id)) ?? workflow.nodes[0];
   const ordered: WorkflowNode[] = [];
   const seen = new Set<string>();
 
-  for (let current = start; current && !seen.has(current.id); ) {
-    ordered.push(current);
-    seen.add(current.id);
-    const next = workflow.edges.find((edge) => edge.from === current!.id && !seen.has(edge.to));
-    current = next ? byId.get(next.to)! : undefined!;
-  }
+  const visit = (node: WorkflowNode | undefined) => {
+    if (!node || seen.has(node.id)) return;
+    seen.add(node.id);
+    ordered.push(node);
+    for (const edge of workflow.edges) if (edge.type === "ai" && edge.to === node.id) visit(byId.get(edge.from));
+    for (const edge of main) if (edge.from === node.id) visit(byId.get(edge.to));
+  };
+  visit(start);
 
   return [...ordered, ...workflow.nodes.filter((node) => !seen.has(node.id))];
 }

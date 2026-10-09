@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectionPath, outputCount } from "@/components/portfolio/workflow-diagram-2d";
+import { connectionPath, outputCount, subConnectionPath } from "@/components/portfolio/workflow-diagram-2d";
 import { nodeSubtitle } from "@/components/portfolio/n8n-node";
 import type { Workflow } from "@/lib/api/types";
 import { BRAND_ICONS, brandFromIconName, displayColor, iconForNodeType, N8N_LOGO } from ".";
@@ -49,17 +49,22 @@ describe("n8n canvas geometry", () => {
       { from: "t", to: "r" },
       { from: "r", to: "a", fromPort: "true" },
       { from: "r", to: "b", fromPort: "false" },
+      { from: "c", to: "r", type: "ai" },
     ],
   };
 
   it("gives routers at least two output handles and every node at least one", () => {
     expect(outputCount(workflow, "r", "router")).toBe(2);
     expect(outputCount(workflow, "t", "trigger")).toBe(1);
-    expect(outputCount(workflow, "c", "action")).toBe(1);
+    expect(outputCount(workflow, "c", "action")).toBe(1); // its AI attachment is not a data output
   });
 
   it("draws connections that leave and enter handles horizontally, mirrored in RTL", () => {
     expect(connectionPath({ x: 0, y: 0 }, { x: 100, y: 40 }, 1)).toBe("M0.0 0.0 C50.0 0.0 50.0 40.0 100.0 40.0");
     expect(connectionPath({ x: 0, y: 0 }, { x: -100, y: 0 }, -1)).toBe("M0.0 0.0 C-50.0 0.0 -50.0 0.0 -100.0 0.0");
+  });
+
+  it("attaches AI sub-nodes vertically, from the sub-node's top into the agent's bottom", () => {
+    expect(subConnectionPath({ x: 0, y: 100 }, { x: 40, y: 20 })).toBe("M0.0 100.0 C0.0 60.0 40.0 60.0 40.0 20.0");
   });
 });

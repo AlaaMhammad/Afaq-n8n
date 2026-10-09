@@ -21,6 +21,8 @@ interface N8nNodeBoxProps {
   outputs: number;
   engaged: boolean;
   selected: boolean;
+  /** AI sub-node (model, memory, tool): round, attached by its top handle to the agent above. */
+  sub?: boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ interface N8nNodeBoxProps {
  * icon, grey input/output handles on its sides, a green border + check once "executed", and —
  * for triggers — the rounded "D" body with the orange lightning marker.
  */
-export function N8nNodeBox({ node, size, flow, outputs, engaged, selected }: N8nNodeBoxProps) {
+export function N8nNodeBox({ node, size, flow, outputs, engaged, selected, sub = false }: N8nNodeBoxProps) {
   const icon = iconForNodeType(node.n8nType, node.kind);
   const trigger = node.kind === "trigger";
   const radius = Math.round(size * 0.14);
@@ -49,28 +51,40 @@ export function N8nNodeBox({ node, size, flow, outputs, engaged, selected }: N8n
           selected ? "border-accent shadow-glow-accent" : engaged ? "border-[#5bd87b]" : "border-[#3fb950]/80",
         )}
         style={{
-          borderRadius: trigger
-            ? flow === 1
-              ? `${size / 2}px ${radius}px ${radius}px ${size / 2}px`
-              : `${radius}px ${size / 2}px ${size / 2}px ${radius}px`
-            : radius,
+          borderRadius: sub
+            ? "50%"
+            : trigger
+              ? flow === 1
+                ? `${size / 2}px ${radius}px ${radius}px ${size / 2}px`
+                : `${radius}px ${size / 2}px ${size / 2}px ${radius}px`
+              : radius,
         }}
       >
         <IntegrationIcon icon={icon} style={{ width: size * 0.46, height: size * 0.46 }} />
         {/* "executed" badge, like n8n after a successful run */}
-        <span className="absolute grid place-items-center rounded-full bg-[#3fb950] text-white" style={{ width: size * 0.2, height: size * 0.2, bottom: size * 0.06, [flow === 1 ? "right" : "left"]: size * 0.06 }}>
+        <span
+          className="absolute grid place-items-center rounded-full bg-[#3fb950] text-white"
+          style={{ width: size * 0.2, height: size * 0.2, bottom: size * 0.06, [flow === 1 ? "right" : "left"]: size * 0.06 }}
+        >
           <Check strokeWidth={3.5} style={{ width: size * 0.13, height: size * 0.13 }} aria-hidden />
         </span>
       </span>
-      {/* handles */}
-      {!trigger && <span className="absolute top-1/2 -translate-y-1/2 rounded-full bg-[#8a8a93]" style={{ width: handle, height: handle, [flow === 1 ? "left" : "right"]: -handle / 2 }} />}
-      {Array.from({ length: outputs }, (_, i) => (
+      {/* handles: sub-nodes have one on top; regular nodes an input and their outputs */}
+      {sub && <span className="absolute left-1/2 -translate-x-1/2 rotate-45 bg-[#8a8a93]" style={{ width: handle, height: handle, top: -handle / 2 }} />}
+      {!trigger && !sub && (
         <span
-          key={i}
-          className="absolute -translate-y-1/2 rounded-full bg-[#8a8a93]"
-          style={{ width: handle, height: handle, top: `${((i + 1) / (outputs + 1)) * 100}%`, [flow === 1 ? "right" : "left"]: -handle / 2 }}
+          className="absolute top-1/2 -translate-y-1/2 rounded-full bg-[#8a8a93]"
+          style={{ width: handle, height: handle, [flow === 1 ? "left" : "right"]: -handle / 2 }}
         />
-      ))}
+      )}
+      {!sub &&
+        Array.from({ length: outputs }, (_, i) => (
+          <span
+            key={i}
+            className="absolute -translate-y-1/2 rounded-full bg-[#8a8a93]"
+            style={{ width: handle, height: handle, top: `${((i + 1) / (outputs + 1)) * 100}%`, [flow === 1 ? "right" : "left"]: -handle / 2 }}
+          />
+        ))}
     </span>
   );
 }

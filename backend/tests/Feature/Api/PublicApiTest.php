@@ -57,7 +57,7 @@ describe('content endpoints', function () {
             ->assertJsonPath('data.metrics.failureRate', 0)
             ->assertJsonStructure(['data' => ['services' => [['slug', 'title']], 'workflow' => ['camera' => ['position', 'target']]]]);
 
-        $this->getJson('/api/v1/projects?locale=ar')->assertJsonCount(3, 'data')->assertJsonPath('data.0.workflow.nodes.0.label', 'استقبال Webhook');
+        $this->getJson('/api/v1/projects?locale=ar')->assertJsonCount(4, 'data')->assertJsonPath('data.0.workflow.nodes.0.label', 'استقبال Webhook');
     });
 
     it('returns 404 problem details for unknown slugs', function () {

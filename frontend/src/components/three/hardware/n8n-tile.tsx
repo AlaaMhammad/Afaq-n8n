@@ -42,20 +42,29 @@ export function tileShape(trigger: boolean, flow: 1 | -1, inset = 0): Shape {
   return shape;
 }
 
+/** AI sub-nodes (model, memory, tool) are round in n8n. */
+export const SUB_RADIUS = TILE * 0.4;
+
+function circleShape(inset = 0): Shape {
+  const shape = new Shape();
+  shape.absarc(0, 0, SUB_RADIUS - inset, 0, Math.PI * 2, false);
+  return shape;
+}
+
 const geometryCache = new Map<string, BufferGeometry>();
 
-function tileGeometry(trigger: boolean, flow: 1 | -1, part: "body" | "rim"): BufferGeometry {
-  const key = `${trigger}:${flow}:${part}`;
+function tileGeometry(trigger: boolean, flow: 1 | -1, part: "body" | "rim", sub = false): BufferGeometry {
+  const key = `${trigger}:${flow}:${part}:${sub}`;
   const cached = geometryCache.get(key);
   if (cached) return cached;
   let geometry: BufferGeometry;
   if (part === "body") {
-    geometry = new ExtrudeGeometry(tileShape(trigger, flow, 0.035), { depth: DEPTH, bevelEnabled: true, bevelSize: 0.025, bevelThickness: 0.025, bevelSegments: 2, curveSegments: 12 });
+    geometry = new ExtrudeGeometry(sub ? circleShape(0.035) : tileShape(trigger, flow, 0.035), { depth: DEPTH, bevelEnabled: true, bevelSize: 0.025, bevelThickness: 0.025, bevelSegments: 2, curveSegments: 12 });
     geometry.translate(0, 0, -DEPTH / 2);
   } else {
     // The border ring: outline with the body cut out of it.
-    const ring = tileShape(trigger, flow);
-    const hole = tileShape(trigger, flow, 0.06);
+    const ring = sub ? circleShape() : tileShape(trigger, flow);
+    const hole = sub ? circleShape(0.06) : tileShape(trigger, flow, 0.06);
     ring.holes.push(new Path(hole.getPoints(48)));
     geometry = new ExtrudeGeometry(ring, { depth: 0.05, bevelEnabled: false, curveSegments: 12 });
     geometry.translate(0, 0, DEPTH / 2);
@@ -74,6 +83,8 @@ export interface N8nTileProps {
   separation: () => number;
   hot: boolean;
   selected: boolean;
+  /** AI sub-node: round tile with a single top handle (attached to the agent above). */
+  sub?: boolean;
 }
 
 /**
@@ -82,13 +93,13 @@ export interface N8nTileProps {
  * grey input/output handles. Exploding pulls the layers apart along the view axis — icon plate
  * forward, border ring, body back — and handles slide out; assembling snaps them together.
  */
-export function N8nTile({ kind, n8nType, palette, flow, outputs, separation, hot, selected }: N8nTileProps) {
-  const trigger = kind === "trigger";
+export function N8nTile({ kind, n8nType, palette, flow, outputs, separation, hot, selected, sub = false }: N8nTileProps) {
+  const trigger = kind === "trigger" && !sub;
   const icon = iconForNodeType(n8nType, kind);
-  const face = useMemo(() => nodeFaceTexture(icon, displayColor(icon.hex, palette.theme), flow), [icon, palette.theme, flow]);
+  const face = useMemo(() => nodeFaceTexture(icon, displayColor(icon.hex, palette.theme), flow, !sub), [icon, palette.theme, flow, sub]);
   const bolt = useMemo(() => (trigger ? boltTexture() : null), [trigger]);
-  const body = useMemo(() => tileGeometry(trigger, flow, "body"), [trigger, flow]);
-  const rim = useMemo(() => tileGeometry(trigger, flow, "rim"), [trigger, flow]);
+  const body = useMemo(() => tileGeometry(trigger, flow, "body", sub), [trigger, flow, sub]);
+  const rim = useMemo(() => tileGeometry(trigger, flow, "rim", sub), [trigger, flow, sub]);
 
   const faceRef = useRef<Group>(null);
   const rimRef = useRef<Group>(null);
@@ -128,7 +139,7 @@ export function N8nTile({ kind, n8nType, palette, flow, outputs, separation, hot
       <group ref={faceRef}>
         {face && (
           <mesh>
-            <planeGeometry args={[TILE * 0.92, TILE * 0.92]} />
+            <planeGeometry args={sub ? [SUB_RADIUS * 1.9, SUB_RADIUS * 1.9] : [TILE * 0.92, TILE * 0.92]} />
             <meshBasicMaterial map={face} transparent depthWrite={false} toneMapped={false} />
           </mesh>
         )}
@@ -136,7 +147,14 @@ export function N8nTile({ kind, n8nType, palette, flow, outputs, separation, hot
 
       {/* handles: input on the reading-start side, outputs on the other */}
       <group ref={inputs}>
-        {!trigger && (
+        {sub && (
+          // n8n's diamond handle on top of a sub-node
+          <mesh position={[0, SUB_RADIUS + HANDLE_R * 0.4, 0]} rotation-z={Math.PI / 4}>
+            <boxGeometry args={[HANDLE_R * 1.5, HANDLE_R * 1.5, HANDLE_R * 1.5]} />
+            <meshStandardMaterial color={handleColor} roughness={0.4} />
+          </mesh>
+        )}
+        {!trigger && !sub && (
           <mesh position={[-flow * (TILE / 2 + HANDLE_R * 0.4), 0, 0]}>
             <sphereGeometry args={[HANDLE_R, 16, 16]} />
             <meshStandardMaterial color={handleColor} roughness={0.4} />
@@ -144,7 +162,7 @@ export function N8nTile({ kind, n8nType, palette, flow, outputs, separation, hot
         )}
       </group>
       <group ref={outputsRef}>
-        {Array.from({ length: outputs }, (_, i) => (
+        {!sub && Array.from({ length: outputs }, (_, i) => (
           <mesh key={i} position={[flow * (TILE / 2 + HANDLE_R * 0.4), TILE / 2 - ((i + 1) / (outputs + 1)) * TILE, 0]}>
             <sphereGeometry args={[HANDLE_R, 16, 16]} />
             <meshStandardMaterial color={handleColor} roughness={0.4} />

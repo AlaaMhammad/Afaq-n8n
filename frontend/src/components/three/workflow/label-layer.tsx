@@ -53,7 +53,7 @@ export function LabelLayer({ workflow, registry }: { workflow: Workflow; registr
             style={{ visibility: "hidden" }}
             // n8n style: bold name with the integration underneath, no pill.
             className={cn(
-              "absolute left-0 top-0 flex flex-col items-center whitespace-nowrap text-center leading-tight will-change-transform [text-shadow:0_1px_3px_var(--background)]",
+              "absolute left-0 top-0 flex max-w-[7.5rem] flex-col items-center text-center leading-tight will-change-transform [text-shadow:0_1px_3px_var(--background)]",
               selected ? "text-accent" : "text-foreground",
             )}
           >

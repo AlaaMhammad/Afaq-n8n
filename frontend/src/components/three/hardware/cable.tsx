@@ -33,6 +33,7 @@ export function Cable({
   hot,
   onCurve,
   variant = "patch",
+  axis = "x",
 }: {
   ends: () => CableEnds;
   palette: ScenePalette;
@@ -41,8 +42,11 @@ export function Cable({
   hot: boolean;
   onCurve?: (curve: CubicBezierCurve3) => void;
   variant?: "patch" | "n8n";
+  /** `y`: leaves and enters vertically (n8n AI sub-node attachment), no arrowhead. */
+  axis?: "x" | "y";
 }) {
   const n8n = variant === "n8n";
+  const vertical = axis === "y";
   const arrow = useRef<Mesh>(null);
   const sheath = useRef<Mesh>(null);
   const conductor = useRef<Mesh>(null);
@@ -90,8 +94,13 @@ export function Cable({
       const sag = n8n ? 0 : Math.min(0.9, span * 0.18);
       const lift = n8n ? 0 : 0.1;
       curve.v0.copy(from);
-      curve.v1.set(from.x + flow * lead, from.y - sag, from.z + lift);
-      curve.v2.set(to.x - flow * lead, to.y - sag, to.z + lift);
+      if (vertical) {
+        curve.v1.set(from.x, from.y + lead, from.z);
+        curve.v2.set(to.x, to.y - lead, to.z);
+      } else {
+        curve.v1.set(from.x + flow * lead, from.y - sag, from.z + lift);
+        curve.v2.set(to.x - flow * lead, to.y - sag, to.z + lift);
+      }
       curve.v3.copy(to);
       if (sheath.current) {
         sheath.current.geometry.dispose();
@@ -99,7 +108,7 @@ export function Cable({
       }
       if (conductor.current) {
         conductor.current.geometry.dispose();
-        conductor.current.geometry = new TubeGeometry(curve, SEGMENTS, n8n ? 0.018 : 0.022, 6, false);
+        conductor.current.geometry = new TubeGeometry(curve, SEGMENTS, vertical ? 0.012 : n8n ? 0.018 : 0.022, 6, false);
       }
       if (arrow.current) {
         // Arrowhead at the input handle, pointing along the curve's end tangent.
@@ -137,7 +146,7 @@ export function Cable({
       <mesh ref={conductor}>
         <meshBasicMaterial color={n8n && hot ? colors.active : colors.conductor} toneMapped={false} transparent opacity={hot ? 1 : n8n ? 0.9 : 0.75} />
       </mesh>
-      {n8n && (
+      {n8n && !vertical && (
         <mesh ref={arrow}>
           <coneGeometry args={[0.065, 0.14, 12]} />
           <meshBasicMaterial color={hot ? colors.active : colors.conductor} toneMapped={false} />

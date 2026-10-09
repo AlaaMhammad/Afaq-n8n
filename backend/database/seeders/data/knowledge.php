@@ -706,6 +706,40 @@ MD,
         ],
     ],
 
+    [
+        'key' => 'case-ai-recruitment',
+        'category' => 'case_study',
+        'project_slug' => 'ai-recruitment-pipeline',
+        'en' => [
+            'title' => 'Case study: AI Recruitment Pipeline',
+            'content' => <<<'MD'
+# Case study: AI Recruitment Pipeline
+
+**Client:** Nama Talent Partners (recruitment agency).
+
+**Problem:** recruiters spent three days screening each batch of CVs by hand, duplicate applications slipped through and strong candidates waited too long for an interview.
+
+**Workflow:** n8n Form Trigger → Extract PDF Text → Google Sheets (find candidate) → IF already applied (shows an "already applied" form page) → Basic LLM Chain with Google Gemini scores the CV against the role → IF score ≥ 70. Qualified candidates go to an AI Agent (recruiter) with Google Gemini and window-buffer memory that checks Google Calendar for a free slot, creates a Google Meet interview event and sends the acceptance email via Gmail. Others are logged in Google Sheets and receive a courteous rejection email.
+
+**Results:** screening time cut from 3 days to 4 minutes, 2,400 applications processed monthly, 140 recruiter hours saved per month, 0% failure rate, average execution 6.4 s.
+MD,
+        ],
+        'ar' => [
+            'title' => 'دراسة حالة: مسار التوظيف بالذكاء الاصطناعي',
+            'content' => <<<'MD'
+# دراسة حالة: مسار التوظيف بالذكاء الاصطناعي
+
+**العميل:** نماء لشركاء المواهب (وكالة توظيف).
+
+**المشكلة:** كان فريق التوظيف يقضي ثلاثة أيام في فرز كل دفعة من السير الذاتية يدوياً، وتتسرب الطلبات المكررة، وينتظر المرشحون المميزون طويلاً قبل المقابلة.
+
+**المسار:** نموذج n8n ← استخراج نص PDF ← البحث في Google Sheets ← شرط "تقدّم سابقاً؟" (يعرض صفحة "تقدّمت سابقاً") ← سلسلة LLM مع Google Gemini تقيّم السيرة مقابل الوظيفة ← شرط "الدرجة ≥ 70؟". المؤهلون ينتقلون إلى وكيل توظيف ذكي مع Google Gemini وذاكرة محادثة يفحص Google Calendar ويحجز مقابلة Google Meet ويرسل بريد القبول عبر Gmail، والبقية يُسجَّلون في Google Sheets ويتلقون بريد اعتذار لبقاً.
+
+**النتائج:** اختصار زمن الفرز من 3 أيام إلى 4 دقائق، ومعالجة 2,400 طلب شهرياً، وتوفير 140 ساعة عمل شهرياً، ونسبة فشل 0%، ومتوسط تنفيذ 6.4 ثانية.
+MD,
+        ],
+    ],
+
     // ───────────────────────── contact & assistant ─────────────────────────
     [
         'key' => 'company-contact',
