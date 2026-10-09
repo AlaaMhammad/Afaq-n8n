@@ -82,7 +82,7 @@ export function WorkflowStage({ workflow, projectSlug, projectTitle, locale }: W
       data-stage-anchor="portfolio"
       className={cn("relative isolate h-80 overflow-hidden rounded-2xl border border-border transition-colors sm:h-[26rem] lg:h-[28rem]", live3d ? "bg-transparent" : "bg-surface/60")}
     >
-      <WorkflowDiagram2D workflow={workflow} exploded={exploded} concealed={live3d} />
+      <WorkflowDiagram2D workflow={workflow} exploded={exploded} flow={locale === "ar" ? -1 : 1} concealed={live3d} />
 
       {show3d && (
         <div key={renderAttempt} className={cn("absolute inset-0 transition-opacity duration-700", ready ? "opacity-100" : "opacity-0")}>

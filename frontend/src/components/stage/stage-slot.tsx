@@ -17,7 +17,7 @@ export interface StageSceneProps {
 
 // One lazy chunk per vignette; three.js itself is shared with the stage canvas chunk.
 const SCENES: Record<StageSceneName, ComponentType<StageSceneProps>> = {
-  hero: dynamic(() => import("@/components/three/scenes/hero-switch"), { ssr: false }),
+  hero: dynamic(() => import("@/components/three/scenes/n8n-logo"), { ssr: false }),
   services: dynamic(() => import("@/components/three/scenes/server-rack"), { ssr: false }),
   team: dynamic(() => import("@/components/three/scenes/neural-core"), { ssr: false }),
   booking: dynamic(() => import("@/components/three/scenes/node-terminal"), { ssr: false }),

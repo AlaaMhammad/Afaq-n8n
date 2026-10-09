@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Check, CheckCircle2, Copy, Mail, PhoneCall, Search, FileSignature } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ServiceRequestCreated } from "@/lib/api/types";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { formatUsd } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
-export const CONTACT_EMAIL = "hello@afaqn8n.me";
 
 /** Confirmation: reference (copyable), estimate recap and what happens next. */
 export function BookingSuccess({ result, onReset }: { result: ServiceRequestCreated; onReset: () => void }) {

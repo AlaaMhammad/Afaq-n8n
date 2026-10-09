@@ -1,4 +1,5 @@
 import { CanvasTexture, SRGBColorSpace, type Texture } from "three";
+import { displayColor, drawIcon, type IntegrationIcon } from "@/lib/integrations";
 
 /**
  * Procedural textures drawn on 2D canvases (no image downloads). Cached per key so a scene with
@@ -25,105 +26,13 @@ function canvasTexture(key: string, width: number, height: number, draw: (ctx: C
   return texture;
 }
 
-/** Deterministic pseudo-random sequence so a board looks the same on every visit. */
-function seeded(seed: string) {
-  let h = 2166136261;
-  for (const char of seed) h = Math.imul(h ^ char.charCodeAt(0), 16777619);
-  return () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    return ((h ^= h >>> 16) >>> 0) / 4294967296;
-  };
-}
-
 const FONT = `"Inter Variable", "IBM Plex Sans Arabic", system-ui, sans-serif`;
 const MONO = `"JetBrains Mono Variable", ui-monospace, monospace`;
 
-/** Printed circuit board: solder mask, copper traces, vias, a chip and silkscreen. */
-export function pcbTexture(seed: string, accent: string, theme: "dark" | "light"): Texture | null {
-  return canvasTexture(`pcb:${seed}:${accent}:${theme}`, 256, 256, (ctx, w, h) => {
-    const random = seeded(seed);
-    ctx.fillStyle = theme === "dark" ? "#0d1f1c" : "#1f4a3f";
-    ctx.fillRect(0, 0, w, h);
-
-    // Copper traces: orthogonal runs with 45° doglegs, like routed tracks.
-    ctx.strokeStyle = theme === "dark" ? "#b0793a" : "#d39a52";
-    ctx.lineCap = "round";
-    for (let i = 0; i < 22; i++) {
-      ctx.lineWidth = random() > 0.7 ? 3 : 1.6;
-      let x = random() * w;
-      let y = random() * h;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      for (let s = 0; s < 3; s++) {
-        const len = 20 + random() * 60;
-        const dir = Math.floor(random() * 4);
-        const dx = [1, -1, 0, 0][dir] * len;
-        const dy = [0, 0, 1, -1][dir] * len;
-        const bend = 8 * (random() > 0.5 ? 1 : -1);
-        x += dx + (dy ? bend : 0);
-        y += dy + (dx ? bend : 0);
-        ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      ctx.fillStyle = "#e0b070";
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Central chip with pins and the accent die marking.
-    const cw = w * 0.34;
-    const cx = (w - cw) / 2;
-    ctx.fillStyle = "#cfd3da";
-    for (let p = 0; p < 8; p++) {
-      ctx.fillRect(cx + 6 + p * (cw - 12) / 7 - 2, cx - 8, 4, 8);
-      ctx.fillRect(cx + 6 + p * (cw - 12) / 7 - 2, cx + cw, 4, 8);
-    }
-    ctx.fillStyle = "#16161b";
-    ctx.fillRect(cx, cx, cw, cw);
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(cx + 10, cx + 10, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Silkscreen
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.font = `600 13px ${MONO}`;
-    ctx.fillText(`AFQ-${seed.slice(0, 6).toUpperCase()}`, 10, h - 12);
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(4, 4, w - 8, h - 8);
-  });
-}
-
-/**
- * Screen-printed label for a node's acrylic cover: integration name, node label and an accent bar.
- * Transparent background so it reads as print on clear acrylic.
- */
-export function decalTexture(title: string, subtitle: string, accent: string, direction: "ltr" | "rtl"): Texture | null {
-  return canvasTexture(`decal:${title}:${subtitle}:${accent}:${direction}`, 512, 256, (ctx, w, h) => {
-    ctx.clearRect(0, 0, w, h);
-    ctx.direction = direction;
-    const start = direction === "rtl" ? w - 36 : 36;
-    ctx.textAlign = direction === "rtl" ? "right" : "left";
-
-    ctx.fillStyle = accent;
-    ctx.fillRect(direction === "rtl" ? w - 36 - 70 : 36, 34, 70, 10);
-
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.font = `800 64px ${FONT}`;
-    ctx.fillText(title, start, 128, w - 72);
-
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.font = `500 38px ${FONT}`;
-    ctx.fillText(subtitle, start, 192, w - 72);
-  });
-}
-
 /** Front panel for a server-rack blade / profile chip: dark plate, label, vents and a status window. */
-export function panelTexture(label: string, caption: string, accent: string, direction: "ltr" | "rtl", aspect = 4): Texture | null {
-  return canvasTexture(`panel:${label}:${caption}:${accent}:${direction}:${aspect}`, Math.round(128 * aspect), 128, (ctx, w, h) => {
+export function panelTexture(label: string, caption: string, accent: string, direction: "ltr" | "rtl", aspect = 4, icon?: IntegrationIcon | null): Texture | null {
+  const iconKey = icon ? (icon.kind === "brand" ? icon.title : icon.name) : "";
+  return canvasTexture(`panel:${label}:${caption}:${accent}:${direction}:${aspect}:${iconKey}`, Math.round(128 * aspect), 128, (ctx, w, h) => {
     ctx.fillStyle = "#15161c";
     ctx.fillRect(0, 0, w, h);
     // vents
@@ -134,15 +43,25 @@ export function panelTexture(label: string, caption: string, accent: string, dir
     ctx.fillStyle = accent;
     ctx.fillRect(direction === "rtl" ? w - 14 : 6, 14, 8, h - 28);
 
+    // the service's real integration mark on a light badge
+    let start = direction === "rtl" ? w - 34 : 34;
+    if (icon) {
+      const badgeX = direction === "rtl" ? w - 34 - 84 : 34;
+      ctx.fillStyle = "#f4f4f6";
+      ctx.beginPath();
+      ctx.roundRect(badgeX, 22, 84, 84, 16);
+      ctx.fill();
+      drawIcon(ctx, icon, badgeX + 14, 36, 56, displayColor(icon.hex, "light"));
+      start = direction === "rtl" ? badgeX - 22 : badgeX + 84 + 22;
+    }
     ctx.direction = direction;
     ctx.textAlign = direction === "rtl" ? "right" : "left";
-    const start = direction === "rtl" ? w - 34 : 34;
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.font = `700 34px ${FONT}`;
-    ctx.fillText(label, start, 58, w - 190);
+    ctx.fillText(label, start, 58, w - 300);
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = `500 22px ${MONO}`;
-    ctx.fillText(caption, start, 96, w - 190);
+    ctx.fillText(caption, start, 96, w - 300);
   });
 }
 
@@ -199,5 +118,44 @@ export function chipTexture(monogramText: string, name: string, role: string, ac
     ctx.font = `500 18px ${MONO}`;
     ctx.textAlign = rtl ? "left" : "right";
     ctx.fillText("AFQ · NEURAL LINK", rtl ? 24 : w - 24, h - 24);
+  });
+}
+
+/**
+ * Face of an n8n node tile: the integration's real icon centred on a transparent plate, plus the
+ * green "executed" check badge n8n shows after a successful run.
+ */
+export function nodeFaceTexture(icon: IntegrationIcon, color: string, flow: 1 | -1): Texture | null {
+  const id = icon.kind === "brand" ? icon.title : icon.name;
+  return canvasTexture(`face:${id}:${color}:${flow}`, 256, 256, (ctx, w) => {
+    ctx.clearRect(0, 0, w, w);
+    drawIcon(ctx, icon, w * 0.27, w * 0.27, w * 0.46, color);
+    const cx = flow === 1 ? w * 0.82 : w * 0.18;
+    const cy = w * 0.82;
+    ctx.fillStyle = "#3fb950";
+    ctx.beginPath();
+    ctx.arc(cx, cy, w * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = w * 0.025;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.04, cy);
+    ctx.lineTo(cx - w * 0.008, cy + w * 0.032);
+    ctx.lineTo(cx + w * 0.045, cy - w * 0.035);
+    ctx.stroke();
+  });
+}
+
+/** The orange lightning marker n8n draws beside trigger nodes. */
+export function boltTexture(): Texture | null {
+  return canvasTexture("bolt", 128, 128, (ctx, w) => {
+    ctx.clearRect(0, 0, w, w);
+    ctx.save();
+    ctx.scale(w / 24, w / 24);
+    ctx.fillStyle = "#ff6d5a";
+    ctx.fill(new Path2D("M13 2 3 14h9l-1 8 10-12h-9l1-8z"));
+    ctx.restore();
   });
 }

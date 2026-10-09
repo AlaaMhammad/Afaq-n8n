@@ -8,7 +8,8 @@ import { cn, formatNumber } from "@/lib/utils";
 import { localizeWorkflow } from "@/lib/workflow";
 import { useSceneStore } from "@/stores/scene-store";
 import { Badge } from "@/components/ui/badge";
-import { KIND_TONE, NodeKindIcon } from "@/components/portfolio/node-kind-icon";
+import { iconForNodeType } from "@/lib/integrations";
+import { IntegrationIcon } from "@/components/ui/integration-icon";
 import { WorkflowStage } from "@/components/portfolio/workflow-stage";
 import { WorkflowSteps } from "@/components/portfolio/workflow-steps";
 
@@ -102,7 +103,7 @@ export function PortfolioExplorer({ projects }: { projects: Project[] }) {
             <div className="rounded-xl border border-accent/40 bg-accent/5 p-3 text-sm" aria-live="polite">
               <div className="flex items-start justify-between gap-2">
                 <p className="flex items-center gap-2 font-semibold">
-                  <NodeKindIcon kind={selected.kind} className={cn("size-4", KIND_TONE[selected.kind] === "accent" ? "text-accent" : "text-pulse")} />
+                  <IntegrationIcon icon={iconForNodeType(selected.n8nType, selected.kind)} className="size-4" />
                   {selected.label}
                 </p>
                 <button type="button" onClick={() => selectNode(null)} className="rounded p-0.5 text-muted hover:text-foreground" aria-label={tCommon("close")}>

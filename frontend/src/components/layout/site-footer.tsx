@@ -1,9 +1,8 @@
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { Container } from "./container";
 import { Logo } from "./logo";
-
-const CONTACT_EMAIL = "hello@afaqn8n.me";
 
 export function SiteFooter({ year }: { year: number }) {
   const t = useTranslations();

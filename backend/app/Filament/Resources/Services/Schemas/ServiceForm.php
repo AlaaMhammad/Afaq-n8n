@@ -21,6 +21,10 @@ class ServiceForm
         'workflow' => 'workflow', 'bot' => 'bot', 'refresh-cw' => 'refresh-cw', 'message-circle' => 'message-circle',
         'truck' => 'truck', 'database' => 'database', 'cpu' => 'cpu', 'zap' => 'zap', 'plug' => 'plug',
         'shopping-cart' => 'shopping-cart', 'mail' => 'mail', 'phone' => 'phone', 'brain-circuit' => 'brain-circuit',
+        // Official integration marks, rendered by the frontend from simple-icons.
+        'brand:n8n' => 'n8n', 'brand:whatsapp' => 'WhatsApp', 'brand:hubspot' => 'HubSpot', 'brand:googlegemini' => 'Google Gemini',
+        'brand:shopify' => 'Shopify', 'brand:gmail' => 'Gmail', 'brand:googlesheets' => 'Google Sheets', 'brand:googlecalendar' => 'Google Calendar',
+        'brand:postgresql' => 'PostgreSQL', 'brand:zendesk' => 'Zendesk', 'brand:telegram' => 'Telegram',
     ];
 
     public static function configure(Schema $schema): Schema
@@ -76,7 +80,7 @@ class ServiceForm
                         Select::make('icon')
                             ->options(self::ICONS)
                             ->searchable()
-                            ->helperText(__('Lucide icon name')),
+                            ->helperText(__('Integration logo or Lucide icon')),
                         TextInput::make('starting_price')
                             ->label(__('Starting price'))
                             ->numeric()

@@ -716,7 +716,7 @@ MD,
 # Contact, working hours and next steps
 
 - **Website:** afaqn8n.me
-- **Email:** hello@afaqn8n.me
+- **Email:** info@afaqn8n.me
 - **Working hours:** Sunday to Thursday, 9:00–18:00 (Riyadh time, GMT+3).
 - **Response time:** within one business day for new requests.
 
@@ -733,7 +733,7 @@ MD,
 # التواصل وساعات العمل والخطوات التالية
 
 - **الموقع:** afaqn8n.me
-- **البريد:** hello@afaqn8n.me
+- **البريد:** info@afaqn8n.me
 - **ساعات العمل:** من الأحد إلى الخميس، من 9:00 إلى 18:00 (بتوقيت الرياض).
 - **زمن الرد:** خلال يوم عمل واحد للطلبات الجديدة.
 

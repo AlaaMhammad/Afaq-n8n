@@ -8,7 +8,7 @@ import { clamp01 } from "@/lib/stage/progress";
 import type { ScenePalette } from "@/lib/theme/palette";
 import { useSceneStore } from "@/stores/scene-store";
 import { Cable, type CableEnds } from "../hardware/cable";
-import { PIN_REACH } from "../hardware/hardware-node";
+import { TILE_REACH, outputHandleY } from "../hardware/n8n-tile";
 import { edgeLabelKey, placeLabel, type LabelRegistry } from "./label-layer";
 import { separationOf } from "./workflow-node";
 import type { SimNode, WorkflowSim } from "./workflow-sim";
@@ -20,17 +20,19 @@ interface WorkflowEdgeProps {
   palette: ScenePalette;
   packets: number;
   flow: 1 | -1;
+  /** Which output handle of the source this connection leaves from, and how many it has. */
+  port: { index: number; count: number };
   reducedMotion: boolean;
 }
 
-/** Pins slide outward a little as the hardware opens up (see HardwareNode). */
-const pinReach = (node: SimNode) => PIN_REACH + 0.16 * clamp01(separationOf(node));
+/** Handles slide outward a little as the tile opens up (see N8nTile). */
+const pinReach = (node: SimNode) => TILE_REACH + 0.18 * clamp01(separationOf(node));
 
 /**
  * A patch cable from the source node's output pin to the target's input pin; the plugs follow the
  * nodes while the workflow explodes. Edge labels ride just above the cable's midpoint.
  */
-export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, reducedMotion }: WorkflowEdgeProps) {
+export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, port, reducedMotion }: WorkflowEdgeProps) {
   const group = useRef<Group>(null);
   const curve = useRef<CubicBezierCurve3 | null>(null);
   // Scratch objects, mutated every frame through a ref (not memoised values).
@@ -45,6 +47,7 @@ export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, reduce
     if (from && to) {
       ends.from.copy(from.position);
       ends.from.x += flow * pinReach(from);
+      ends.from.y += outputHandleY(port.index, port.count) * (1 + from.peek * 0.06);
       ends.to.copy(to.position);
       ends.to.x -= flow * pinReach(to);
     }
@@ -70,6 +73,7 @@ export function WorkflowEdge({ edge, sim, labels, palette, packets, flow, reduce
         packets={packets}
         reducedMotion={reducedMotion}
         hot={hot}
+        variant="n8n"
         onCurve={(c) => {
           curve.current = c;
         }}

@@ -3,6 +3,7 @@
 import type { Camera, Vector3 } from "three";
 import type { Workflow } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { nodeSubtitle } from "@/components/portfolio/n8n-node";
 import { useSceneStore } from "@/stores/scene-store";
 
 /** DOM elements of the labels, keyed by node id or `edge:from-to`; positioned from the frame loop. */
@@ -50,16 +51,14 @@ export function LabelLayer({ workflow, registry }: { workflow: Workflow; registr
             ref={register(node.id)}
             dir="auto"
             style={{ visibility: "hidden" }}
+            // n8n style: bold name with the integration underneath, no pill.
             className={cn(
-              "absolute left-0 top-0 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur-sm transition-colors will-change-transform",
-              selected
-                ? "border-accent bg-accent text-white"
-                : hot
-                  ? "border-accent/70 bg-surface/90 text-foreground"
-                  : "border-border bg-surface/75 text-muted",
+              "absolute left-0 top-0 flex flex-col items-center whitespace-nowrap text-center leading-tight will-change-transform [text-shadow:0_1px_3px_var(--background)]",
+              selected ? "text-accent" : "text-foreground",
             )}
           >
-            {node.label}
+            <span className={cn("text-[11px] font-semibold", hot && !selected && "text-[#3fb950]")}>{node.label}</span>
+            <span className="text-[9px] text-muted">{nodeSubtitle(node)}</span>
           </span>
         );
       })}

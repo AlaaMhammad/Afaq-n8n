@@ -4,8 +4,10 @@ import { useLocale, useTranslations } from "next-intl";
 import type { Workflow } from "@/lib/api/types";
 import { cn, formatNumber } from "@/lib/utils";
 import { orderedNodes } from "@/lib/workflow";
+import { nodeSubtitle } from "./n8n-node";
 import { useSceneStore } from "@/stores/scene-store";
-import { KIND_TONE, NodeKindIcon } from "./node-kind-icon";
+import { iconForNodeType } from "@/lib/integrations";
+import { IntegrationIcon } from "@/components/ui/integration-icon";
 
 /**
  * The workflow's nodes in data-flow order as a keyboard/screen-reader friendly list. Hovering
@@ -25,7 +27,6 @@ export function WorkflowSteps({ workflow }: { workflow: Workflow }) {
       <ol className="space-y-1.5">
         {orderedNodes(workflow).map((node, index) => {
           const selected = selectedNodeId === node.id;
-          const tone = KIND_TONE[node.kind];
           return (
             <li key={node.id}>
               <button
@@ -44,17 +45,15 @@ export function WorkflowSteps({ workflow }: { workflow: Workflow }) {
                 <span className="font-mono text-[11px] text-muted" aria-hidden>
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <span
-                  className={cn(
-                    "grid size-7 shrink-0 place-items-center rounded-md",
-                    tone === "accent" ? "bg-accent/15 text-accent" : "bg-pulse/15 text-pulse",
-                  )}
-                >
-                  <NodeKindIcon kind={node.kind} className="size-3.5" />
+                {/* the node's real integration icon, on an n8n-style tile */}
+                <span className="grid size-7 shrink-0 place-items-center rounded-md border border-border bg-white dark:bg-[#2e2e33]">
+                  <IntegrationIcon icon={iconForNodeType(node.n8nType, node.kind)} className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{node.label}</span>
-                  <span className="block text-[11px] text-muted">{t(`kinds.${node.kind}`)}</span>
+                  <span className="block text-[11px] text-muted">
+                    {t(`kinds.${node.kind}`)} · {nodeSubtitle(node)}
+                  </span>
                 </span>
                 {node.stats && (
                   <bdi dir="ltr" className="shrink-0 font-mono text-[11px] text-muted">

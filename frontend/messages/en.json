@@ -39,7 +39,7 @@
     "subtitle": "We engineer n8n workflows and Arabic-first AI agents, and connect your company's systems into one reliable data flow.",
     "primaryCta": "Book a free consultation",
     "secondaryCta": "Explore our 3D portfolio",
-    "coreLabel": "An n8n trigger built as a high-voltage switch that powers the data conduits running down the page",
+    "coreLabel": "The n8n logo in 3D — data pulses run through it like a workflow execution and power the conduits down the page",
     "askCopilot": "Ask the Copilot",
     "tryAsking": "Try asking the Copilot",
     "prompts": {
@@ -52,8 +52,8 @@
       "runs": "Runs / month",
       "hours": "Hours saved / month"
     },
-    "coreHint": "Scroll or click the switch to power up the workflow",
-    "switchOn": "Circuit closed — data is flowing"
+    "coreHint": "Scroll or click the logo to run the workflow",
+    "switchOn": "Workflow running — data is flowing"
   },
   "services": {
     "eyebrow": "What we do",

@@ -35,6 +35,7 @@ export function ServicesSection({ services }: { services: Service[] | null }) {
   const rack = services.map((service) => ({
     slug: service.slug,
     title: service.title,
+    icon: service.icon,
     caption: service.starting_price !== null ? `${t("common.startingFrom")} $${service.starting_price.toLocaleString("en-US")}` : "n8n",
   }));
 

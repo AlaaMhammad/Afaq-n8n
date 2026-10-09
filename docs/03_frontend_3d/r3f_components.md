@@ -304,3 +304,29 @@ Cables plug into the pin tips (`PIN_REACH`). Tube geometry is rebuilt only when 
 **Budget.** No downloaded assets. The 3D JavaScript is ~243 KB gzipped, lazy (three + R3F + drei ~234 KB, plus small scene chunks). The initial page JS is ~313 KB gzipped.
 
 **Verification status.** Unit tests cover progress maths, conduit routing, decals and the simulation (77 frontend tests pass); typecheck, lint and the production build pass. **These scenes have not yet been inspected visually in a browser.** Check them on the next run with a visible browser: dark/light, ar/en, 375–1440 px.
+
+## 12. n8n look and real icons (2026-10-09, ADR-023)
+
+- **Icon registry:** `src/lib/integrations/index.ts` maps an n8n node type to an icon:
+  - official brand marks from simple-icons, e.g. `n8n-nodes-base.whatsApp` → WhatsApp, `lmChatGoogleGemini` → Gemini
+  - n8n core glyphs (`core-icons.ts`, generated from lucide data): Webhook, IF/Switch, Filter, Code, Form, Agent, LLM Chain…
+
+  Unknown types fall back by node kind. The same icon renders as inline SVG (`IntegrationIcon`) and on canvas textures (`drawIcon`). `displayColor()` lifts brand colours that would vanish on the current theme.
+- **Portfolio, 2D** (`portfolio/n8n-node.tsx`, `workflow-diagram-2d.tsx`): drawn like the n8n canvas.
+  - Dotted background; nodes are rounded squares (triggers use the "D" shape with the orange lightning marker).
+  - Grey handles, with routers fanning out to at least 2 outputs.
+  - A green "executed" border and check badge on every node.
+  - Bezier connections leave and enter handles horizontally, with arrowheads, branch labels (`fromPort`) and flowing green dashes.
+  - Labels show the node name with the integration as a subtitle.
+- **Portfolio, 3D** (`hardware/n8n-tile.tsx`): the same node as a tile.
+  - Parts: an extruded body (rounded square or D), a green border ring, and a face plate carrying the real icon and check badge, plus handle spheres and the lightning marker.
+  - On explode the face plate moves forward, the border ring moves out and the body moves back; the handles slide out; the spring's overshoot snaps the layers together on assemble.
+  - Connections use `Cable variant="n8n"`: a thin grey line with no sag and a cone arrowhead that turns green on hover or selection, carrying green data packets.
+- **Hero** (`scenes/n8n-logo.tsx`): the official n8n mark built from its SVG path (`SVGLoader` → bevelled `ExtrudeGeometry`).
+  - On load it extrudes out of the page and swings into place (spring), then floats and leans toward the pointer.
+  - Once powered (scroll or click), pulses run trigger → hub → both branches and the ring holes light up as they arrive.
+  - The logo is never mirrored in RTL.
+  - Poster: the flat n8n SVG with a glow.
+- **Rack blades and the booking cartridge** show the service's real mark on a light badge (`panelTexture(…, icon)`).
+- **Budget:** 13 brand icons bundled (+~10 KB initial JS, 323 KB gzip); the lazy 3D is ~252 KB gzip including `SVGLoader`.
+- **Verification status:** unit tests cover icon mapping, colour lifting, subtitles, handle counts and connection paths (81 frontend tests); typecheck, lint and the production build pass. **Not yet inspected in a visible browser.**

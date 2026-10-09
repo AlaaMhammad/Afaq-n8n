@@ -1,40 +1,53 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { NodeKind, Workflow } from "@/lib/api/types";
+import { useEffect, useId, useRef, useState } from "react";
+import type { Workflow } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { useSceneStore } from "@/stores/scene-store";
-
-const KIND_STYLES: Record<NodeKind, string> = {
-  trigger: "rotate-45 rounded-md border-accent bg-accent/15",
-  router: "rounded-full border-pulse bg-pulse/15",
-  action: "rounded-lg border-accent/70 bg-surface-2",
-  ai: "rounded-[40%] border-pulse bg-pulse/10",
-  storage: "rounded-md border-muted bg-surface-2",
-};
+import { N8nNodeBox, nodeSubtitle } from "./n8n-node";
 
 /** Scene units → pixels, capped for large stages. */
 const MAX_UNIT = 46;
-/** Half the node button width plus a small gutter, so outer labels never clip. */
+/** Half the node column width plus a small gutter, so outer labels never clip. */
 const NODE_HALF_PX = 54;
 
 /** Furthest |x| any node reaches, assembled or exploded (scene units). */
 const reachX = (workflow: Workflow) => Math.max(1, ...workflow.nodes.flatMap((n) => [Math.abs(n.position[0]), Math.abs(n.position[0] + n.exploded[0])]));
 
+/** Node body size for a given scale: n8n's square nodes, kept legible on phones. */
+export const nodeSizeFor = (unit: number) => Math.round(Math.min(64, Math.max(34, unit * 1.3)));
+
+/** Output handles per node: routers fan out to at least two branches, like n8n's IF/Switch. */
+export function outputCount(workflow: Workflow, nodeId: string, kind: string): number {
+  const outgoing = workflow.edges.filter((edge) => edge.from === nodeId).length;
+  return Math.max(kind === "router" ? 2 : 1, outgoing);
+}
+
+/** n8n-style connection: leaves the output handle horizontally and enters the input handle horizontally. */
+export function connectionPath(a: { x: number; y: number }, b: { x: number; y: number }, flow: 1 | -1): string {
+  const bend = Math.max(28, Math.abs(b.x - a.x) * 0.5) * flow;
+  const f = (v: number) => v.toFixed(1);
+  return `M${f(a.x)} ${f(a.y)} C${f(a.x + bend)} ${f(a.y)} ${f(b.x - bend)} ${f(b.y)} ${f(b.x)} ${f(b.y)}`;
+}
+
 interface WorkflowDiagram2DProps {
   workflow: Workflow;
   exploded: boolean;
+  /** +1 LTR; -1 Arabic (the workflow reads right → left). */
+  flow?: 1 | -1;
   /** Hidden visually (the 3D canvas is showing) but kept mounted as the instant fallback. */
   concealed?: boolean;
 }
 
 /**
- * The workflow as an SVG/DOM diagram from the same spec as the 3D scene. It is the server-rendered
- * poster (no layout shift, nothing blocks LCP), the fallback for devices without WebGL or that run
- * slowly, and an accessible alternative: every node is a real button wired to the scene store.
+ * The workflow drawn like the n8n editor canvas — dotted background, square nodes with real
+ * integration icons, trigger "D" nodes with the lightning marker, grey handles and bezier
+ * connections with arrowheads. It is the server-rendered poster, the fallback without WebGL,
+ * and an accessible alternative: every node is a real button wired to the scene store.
  */
-export function WorkflowDiagram2D({ workflow, exploded, concealed = false }: WorkflowDiagram2DProps) {
+export function WorkflowDiagram2D({ workflow, exploded, flow = 1, concealed = false }: WorkflowDiagram2DProps) {
   const stage = useRef<HTMLDivElement>(null);
+  const markerId = useId().replace(/:/g, "");
   const [unit, setUnit] = useState(MAX_UNIT);
   const selectedNodeId = useSceneStore((s) => s.selectedNodeId);
   const hoveredNodeId = useSceneStore((s) => s.hoveredNodeId);
@@ -50,42 +63,63 @@ export function WorkflowDiagram2D({ workflow, exploded, concealed = false }: Wor
     return () => observer.disconnect();
   }, [workflow]);
 
+  const size = nodeSizeFor(unit);
+  const half = size / 2;
   const progress = exploded ? 1 : 0;
   const at = (node: Workflow["nodes"][number]) => ({
     x: (node.position[0] + node.exploded[0] * progress) * unit,
     y: -(node.position[1] + node.exploded[1] * progress) * unit,
   });
+  const byId = new Map(workflow.nodes.map((node) => [node.id, node]));
 
   return (
     <div
       ref={stage}
       aria-hidden={concealed || undefined}
       inert={concealed || undefined}
-      className={cn("bg-grid absolute inset-0 transition-opacity duration-700", concealed && "pointer-events-none opacity-0")}
+      className={cn(
+        "absolute inset-0 bg-[radial-gradient(circle,var(--n8n-dot)_1px,transparent_1.2px)] [--n8n-dot:#c9c9d2] [background-size:20px_20px] transition-opacity duration-700 dark:[--n8n-dot:#3a3a40]",
+        concealed && "pointer-events-none opacity-0",
+      )}
     >
-      {/* 1px SVG anchored at the stage centre (a zero-size outer <svg> is not rendered at all): plain px coordinates, no percentages
-          (Chrome does not re-resolve % inside SVG attributes when the stage resizes). */}
+      {/* 1px SVG anchored at the stage centre (a zero-size outer <svg> is not rendered at all). */}
       <svg className="absolute left-1/2 top-1/2 size-px overflow-visible" aria-hidden>
+        <defs>
+          <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#8a8a93" />
+          </marker>
+        </defs>
         {workflow.edges.map((edge) => {
-          const from = workflow.nodes.find((n) => n.id === edge.from);
-          const to = workflow.nodes.find((n) => n.id === edge.to);
+          const from = byId.get(edge.from);
+          const to = byId.get(edge.to);
           if (!from || !to) return null;
+          const outs = outputCount(workflow, from.id, from.kind);
+          const portIndex = Math.max(0, workflow.edges.filter((e) => e.from === from.id).indexOf(edge));
           const a = at(from);
           const b = at(to);
-          const d = `M${a.x.toFixed(1)} ${a.y.toFixed(1)} L${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+          const start = { x: a.x + flow * half, y: a.y - half + ((portIndex + 1) / (outs + 1)) * size };
+          const end = { x: b.x - flow * (half + 6), y: b.y };
+          const d = connectionPath(start, end, flow);
+          const hot = [hoveredNodeId, selectedNodeId].some((id) => id === edge.from || id === edge.to);
           return (
-            // A path, not a line: as the CSS `d` property the edge glides with its nodes
-            // (Chrome/Firefox); the attribute is the static fallback (Safari).
-            <path
-              key={`${edge.from}-${edge.to}`}
-              d={d}
-              style={{ d: `path("${d}")` }}
-              fill="none"
-              stroke="var(--pulse)"
-              strokeWidth={1.5}
-              strokeDasharray="6 6"
-              className="animate-dash transition-[d] duration-700 ease-out motion-reduce:animate-none"
-            />
+            <g key={`${edge.from}-${edge.to}`}>
+              <path
+                d={d}
+                style={{ d: `path("${d}")` }}
+                fill="none"
+                stroke={hot ? "#3fb950" : "#8a8a93"}
+                strokeWidth={hot ? 2.5 : 2}
+                markerEnd={`url(#${markerId})`}
+                className="transition-[d,stroke] duration-700 ease-out"
+              />
+              {/* data flowing along the connection */}
+              <path d={d} style={{ d: `path("${d}")` }} fill="none" stroke="#3fb950" strokeWidth={2} strokeDasharray="4 14" className="animate-dash opacity-70 transition-[d] duration-700 ease-out motion-reduce:hidden" />
+              {(edge.label || edge.fromPort) && (
+                <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 8} textAnchor="middle" className="fill-muted font-mono text-[10px]">
+                  {edge.label ?? edge.fromPort}
+                </text>
+              )}
+            </g>
           );
         })}
       </svg>
@@ -101,13 +135,14 @@ export function WorkflowDiagram2D({ workflow, exploded, concealed = false }: Wor
             onPointerEnter={() => hoverNode(node.id)}
             onPointerLeave={() => hoverNode(null)}
             aria-pressed={selectedNodeId === node.id}
-            // Physical coordinates (localizeWorkflow() already mirrored X for RTL); the 40px icon's
-            // centre — not the button's — sits on the point, so edges meet the icons exactly.
-            className="absolute left-1/2 top-1/2 flex w-24 flex-col items-center gap-2 rounded-lg transition-transform duration-700 ease-out"
-            style={{ transform: `translate(calc(${x.toFixed(1)}px - 50%), ${(y - 20).toFixed(1)}px)` }}
+            // Physical coordinates (localizeWorkflow() already mirrored X for RTL); the node body's
+            // centre sits on the point, so connections meet the handles exactly.
+            className="absolute left-1/2 top-1/2 flex w-28 flex-col items-center gap-1.5 rounded-lg transition-transform duration-700 ease-out focus-visible:outline-offset-4"
+            style={{ transform: `translate(calc(${x.toFixed(1)}px - 50%), ${(y - half).toFixed(1)}px)` }}
           >
-            <span className={cn("size-10 border-2 shadow-sm transition-shadow", KIND_STYLES[node.kind], engaged && "shadow-glow-accent")} aria-hidden />
-            <span className="text-center text-[11px] font-medium leading-tight text-foreground">{node.label}</span>
+            <N8nNodeBox node={node} size={size} flow={flow} outputs={outputCount(workflow, node.id, node.kind)} engaged={engaged} selected={selectedNodeId === node.id} />
+            <span className="max-w-full text-center text-[11px] font-semibold leading-tight text-foreground">{node.label}</span>
+            <span className="-mt-1 max-w-full truncate text-center text-[9px] text-muted">{nodeSubtitle(node)}</span>
           </button>
         );
       })}

@@ -11,7 +11,7 @@ import { StageSlot } from "@/components/stage/stage-slot";
 export function BookingSection({ services }: { services: Service[] | null }) {
   const t = useTranslations("booking");
   const locale = useLocale() as "ar" | "en";
-  const terminal = { services: (services ?? []).map(({ slug, title }) => ({ slug, title })), customLabel: t("customCartridge") };
+  const terminal = { services: (services ?? []).map(({ slug, title, icon }) => ({ slug, title, icon })), customLabel: t("customCartridge") };
 
   return (
     <SectionShell

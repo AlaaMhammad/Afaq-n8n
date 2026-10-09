@@ -8,7 +8,7 @@
 return [
     [
         'slug' => 'custom-n8n-nodes',
-        'icon' => 'workflow',
+        'icon' => 'brand:n8n',
         'starting_price' => 1500,
         'title' => [
             'ar' => 'تطوير عُقد n8n مخصصة',
@@ -28,7 +28,7 @@ return [
     ],
     [
         'slug' => 'ai-voice-chat-agents',
-        'icon' => 'bot',
+        'icon' => 'brand:googlegemini',
         'starting_price' => 3000,
         'title' => [
             'ar' => 'وكلاء الذكاء الاصطناعي الصوتيون والنصيون',
@@ -48,7 +48,7 @@ return [
     ],
     [
         'slug' => 'crm-sync',
-        'icon' => 'refresh-cw',
+        'icon' => 'brand:hubspot',
         'starting_price' => 2000,
         'title' => [
             'ar' => 'مزامنة أنظمة CRM (HubSpot / Salesforce)',
@@ -67,7 +67,7 @@ return [
     ],
     [
         'slug' => 'whatsapp-business-automation',
-        'icon' => 'message-circle',
+        'icon' => 'brand:whatsapp',
         'starting_price' => 1800,
         'title' => [
             'ar' => 'أتمتة واتساب للأعمال',
@@ -86,7 +86,7 @@ return [
     ],
     [
         'slug' => 'ecommerce-logistics-routing',
-        'icon' => 'truck',
+        'icon' => 'brand:shopify',
         'starting_price' => 2500,
         'title' => [
             'ar' => 'توجيه الخدمات اللوجستية للتجارة الإلكترونية',

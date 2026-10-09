@@ -2,23 +2,23 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { StageSlot } from "@/components/stage/stage-slot";
+import { IntegrationIcon } from "@/components/ui/integration-icon";
+import { N8N_CORAL, N8N_LOGO } from "@/lib/integrations";
 import { useSceneStore } from "@/stores/scene-store";
 
-/** CSS poster: shown first, on phones, and wherever WebGL is unavailable. */
+/** Poster: the flat n8n mark with a soft glow — shown first, on phones, and without WebGL. */
 function HeroPoster() {
   return (
-    <div className="absolute inset-0">
-      <div className="absolute inset-0 rounded-full border border-pulse/20" />
-      <div className="absolute inset-10 rounded-full border border-dashed border-accent/30" />
-      <div className="absolute inset-24 rounded-full bg-accent/10 shadow-glow-accent" />
-      <div className="absolute inset-[38%] animate-pulse-ring rounded-full bg-accent shadow-glow-accent" />
+    <div className="absolute inset-0 grid place-items-center">
+      <div className="absolute inset-[18%] rounded-full opacity-40 blur-3xl" style={{ background: `radial-gradient(circle, ${N8N_CORAL} 0%, transparent 65%)` }} />
+      <IntegrationIcon icon={N8N_LOGO} className="relative w-[62%] drop-shadow-[0_0_24px_rgb(234_75_113/0.45)] motion-safe:animate-pulse-ring" />
     </div>
   );
 }
 
 /**
- * Hero centrepiece: the n8n trigger switch, a vignette of the shared stage canvas. Scrolling or
- * clicking it closes the circuit and energises the data conduits that run down the page.
+ * Hero centrepiece: the n8n logo in 3D, a vignette of the shared stage canvas. Scrolling or
+ * clicking it runs the "workflow" and energises the data conduits that run down the page.
  */
 export function HeroVisual() {
   const t = useTranslations("hero");

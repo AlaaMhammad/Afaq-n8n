@@ -3,6 +3,8 @@ import {
   Bot, BrainCircuit, Cpu, Database, Mail, MessageCircle, Phone, Plug, RefreshCw, ShoppingCart, Truck, Workflow, Zap,
   type LucideIcon,
 } from "lucide-react";
+import { brandFromIconName, displayColor } from "@/lib/integrations";
+import { IntegrationIcon } from "./integration-icon";
 
 /** Lucide icons allowed for services (mirrors ServiceForm::ICONS in the admin panel). */
 const SERVICE_ICONS: Record<string, LucideIcon> = {
@@ -11,7 +13,13 @@ const SERVICE_ICONS: Record<string, LucideIcon> = {
   "brain-circuit": BrainCircuit,
 };
 
-export function ServiceIcon({ name, className }: { name: string | null; className?: string }) {
+/**
+ * A service's icon: an official integration mark for `brand:<slug>` names (WhatsApp, HubSpot, n8n…),
+ * otherwise the lucide glyph. Dark brand colours are lifted so they stay visible on dark cards.
+ */
+export function ServiceIcon({ name, className, monochrome = false }: { name: string | null; className?: string; monochrome?: boolean }) {
+  const brandIcon = brandFromIconName(name);
+  if (brandIcon) return <IntegrationIcon icon={brandIcon} color={monochrome ? "currentColor" : `light-dark(${displayColor(brandIcon.hex, "light")}, ${displayColor(brandIcon.hex, "dark")})`} className={className} />;
   const Icon = (name && SERVICE_ICONS[name]) || Workflow;
   return <Icon className={className} aria-hidden />;
 }

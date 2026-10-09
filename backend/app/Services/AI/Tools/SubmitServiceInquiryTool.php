@@ -81,7 +81,7 @@ final class SubmitServiceInquiryTool implements Tool
 
         $limiterKey = 'ai-inquiry:'.($context->ipAddress ?? $context->session->id);
         if (RateLimiter::tooManyAttempts($limiterKey, (int) config('ai.agent.inquiries_per_ip_per_day', 3))) {
-            return ToolResult::error('Not submitted: daily request limit reached. Ask the user to use the booking form or email hello@afaqn8n.me.');
+            return ToolResult::error('Not submitted: daily request limit reached. Ask the user to use the booking form or email info@afaqn8n.me.');
         }
 
         try {

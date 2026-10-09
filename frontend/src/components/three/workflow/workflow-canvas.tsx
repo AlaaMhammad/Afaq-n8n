@@ -83,6 +83,12 @@ function WorkflowWorld({ workflow, labels, palette, settings, flow, reducedMotio
   const sim = useMemo(() => new WorkflowSim(workflow, useSceneStore.getState().mode === "exploded" ? 1 : 0), [workflow]);
   const root = useRef<Group>(null);
   const byId = useMemo(() => new Map(workflow.nodes.map((node) => [node.id, node])), [workflow]);
+  // Output handles per node and which handle each connection leaves from (n8n IF/Switch fan-out).
+  const ports = useMemo(() => {
+    const count = new Map(workflow.nodes.map((node) => [node.id, Math.max(node.kind === "router" ? 2 : 1, workflow.edges.filter((e) => e.from === node.id).length)]));
+    const index = new Map(workflow.edges.map((edge) => [`${edge.from}-${edge.to}`, workflow.edges.filter((e) => e.from === edge.from).indexOf(edge)]));
+    return { count, index };
+  }, [workflow]);
 
   // Registered after the children's callbacks, so every node and cable reads the same
   // (previous) simulation state within a frame — they can never drift apart.
@@ -106,7 +112,7 @@ function WorkflowWorld({ workflow, labels, palette, settings, flow, reducedMotio
     <>
       <group ref={root}>
         {sim.nodes.map((node) => (
-          <WorkflowNode key={node.id} node={node} data={byId.get(node.id)!} labels={labels} palette={palette} settings={settings} flow={flow} reducedMotion={reducedMotion} />
+          <WorkflowNode key={node.id} node={node} data={byId.get(node.id)!} labels={labels} palette={palette} flow={flow} outputs={ports.count.get(node.id) ?? 1} />
         ))}
         {workflow.edges.map((edge) => (
           <WorkflowEdge
@@ -117,6 +123,7 @@ function WorkflowWorld({ workflow, labels, palette, settings, flow, reducedMotio
             palette={palette}
             packets={edge.animated === false ? 0 : settings.packetsPerEdge}
             flow={flow}
+            port={{ index: ports.index.get(`${edge.from}-${edge.to}`) ?? 0, count: ports.count.get(edge.from) ?? 1 }}
             reducedMotion={reducedMotion}
           />
         ))}

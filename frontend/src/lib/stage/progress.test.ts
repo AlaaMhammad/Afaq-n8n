@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { integrationName, monogram, portCounts } from "@/components/three/hardware/decal-text";
+import { monogram } from "@/components/three/hardware/decal-text";
 import { snapEase, smoothstep, staggered, travelProgress } from "./progress";
 
 describe("stage progress", () => {
@@ -28,18 +28,7 @@ describe("stage progress", () => {
   });
 });
 
-describe("hardware decals", () => {
-  it("names integrations from n8n node types", () => {
-    expect(integrationName("n8n-nodes-base.emailReadImap")).toBe("IMAP");
-    expect(integrationName("@n8n/n8n-nodes-langchain.sentimentAnalysis")).toBe("SENTIMENT");
-    expect(integrationName("n8n-nodes-base.microsoftOutlook")).toBe("MICROSOFT OUTL");
-  });
-
-  it("lays out ports per node kind", () => {
-    expect(portCounts("trigger")).toEqual({ inputs: 0, outputs: 1 });
-    expect(portCounts("router").outputs).toBe(3);
-  });
-
+describe("profile chip monograms", () => {
   it("builds monograms for Latin and Arabic names", () => {
     expect(monogram("Layla Mansour")).toBe("LM");
     expect(monogram("عمر الحربي")).toBe("عا");

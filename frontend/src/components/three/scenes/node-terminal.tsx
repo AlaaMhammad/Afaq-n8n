@@ -9,13 +9,14 @@ import { scenePalette, type ScenePalette } from "@/lib/theme/palette";
 import { useSceneStore } from "@/stores/scene-store";
 import { useUiStore } from "@/stores/ui-store";
 import { AcrylicCover, Chassis, Halo, Led, useGlowColor } from "../hardware/parts";
-import { decalTexture } from "../hardware/textures";
+import { brandFromIconName, N8N_LOGO } from "@/lib/integrations";
+import { panelTexture } from "../hardware/textures";
 import { StageView } from "../stage/stage-view";
 import { settingsFor } from "../utils/quality";
 import { stepSpring } from "../utils/spring";
 
 export interface TerminalData {
-  services: { slug: string; title: string }[];
+  services: { slug: string; title: string; icon: string | null }[];
   /** Cartridge label when the visitor chose "not sure yet". */
   customLabel: string;
 }
@@ -57,8 +58,10 @@ function Terminal({ data, palette, flow, rtl }: { data: TerminalData; palette: S
   const packetColor = useGlowColor(palette.accent, palette, 1.2);
 
   const socketX = (i: number) => flow * (i - (SOCKETS - 1) / 2) * PITCH;
-  const title = data.services.find((s) => s.slug === track.serviceSlug)?.title ?? data.customLabel;
-  const decal = useMemo(() => decalTexture(title.toUpperCase().slice(0, 18), "n8n · SERVICE", palette.accent, rtl ? "rtl" : "ltr"), [title, palette.accent, rtl]);
+  const service = data.services.find((s) => s.slug === track.serviceSlug);
+  const title = service?.title ?? data.customLabel;
+  const icon = brandFromIconName(service?.icon) ?? N8N_LOGO;
+  const decal = useMemo(() => panelTexture(title, "n8n · SERVICE", palette.accent, rtl ? "rtl" : "ltr", 2, icon), [title, icon, palette.accent, rtl]);
   // The cartridge seats once a service is picked (or the visitor moved past step 1).
   const seated = track.step >= 1 || track.submitted;
 

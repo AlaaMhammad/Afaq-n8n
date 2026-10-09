@@ -9,6 +9,7 @@ import { snapEase, staggered } from "@/lib/stage/progress";
 import { scenePalette, type ScenePalette } from "@/lib/theme/palette";
 import { useUiStore } from "@/stores/ui-store";
 import { Chassis, Halo, Led } from "../hardware/parts";
+import { brandFromIconName } from "@/lib/integrations";
 import { panelTexture } from "../hardware/textures";
 import { StageView, useSectionProgress } from "../stage/stage-view";
 import { damp } from "../utils/spring";
@@ -17,6 +18,7 @@ export interface RackService {
   slug: string;
   title: string;
   caption: string;
+  icon: string | null;
 }
 
 const BLADE = { width: 2.6, height: 0.34, depth: 1.6 };
@@ -99,7 +101,7 @@ function Rack({ services, palette, flow, height, locale }: { services: RackServi
 
 function Blade({ service, palette, flow, locale }: { service: RackService; palette: ScenePalette; flow: 1 | -1; locale: "ar" | "en" }) {
   const focused = useUiStore((s) => s.focus.service === service.slug);
-  const face = useMemo(() => panelTexture(service.title, service.caption, palette.accent, locale === "ar" ? "rtl" : "ltr", (BLADE.width - 0.12) / (BLADE.height - 0.06)), [service.title, service.caption, palette.accent, locale]);
+  const face = useMemo(() => panelTexture(service.title, service.caption, palette.accent, locale === "ar" ? "rtl" : "ltr", (BLADE.width - 0.12) / (BLADE.height - 0.06), brandFromIconName(service.icon)), [service.title, service.caption, service.icon, palette.accent, locale]);
 
   return (
     <group>
